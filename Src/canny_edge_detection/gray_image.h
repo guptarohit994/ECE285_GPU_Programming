@@ -1,8 +1,17 @@
-/* creates a basic handler for a grayscale image
+/*************************************************************************
+/* ECE 285: GPU Programmming 2019 Fall quarter
+/* Author: Group_G
+/* Copyright 2019
+/* University of California, San Diego
+/*************************************************************************/
+
+/* 	creates a basic handler for a grayscale image
 */
 
 #ifndef __GRAY_IMAGE_H
 #define __GRAY_IMAGE_H
+
+#include <assert.h>
 
 class gray_image {
 	private:

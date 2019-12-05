@@ -1,3 +1,10 @@
+/*************************************************************************
+/* ECE 285: GPU Programmming 2019 Fall quarter
+/* Author: Group_G
+/* Copyright 2019
+/* University of California, San Diego
+/*************************************************************************/
+
 #include "utils.h"
 
 #define INPUT_FILE_NAME ""

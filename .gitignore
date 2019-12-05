@@ -1,2 +1,5 @@
 # Mac system file
 .DS_Store
+
+# generated files
+build/

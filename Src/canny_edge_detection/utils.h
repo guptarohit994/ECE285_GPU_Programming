@@ -1,3 +1,10 @@
+/*************************************************************************
+/* ECE 285: GPU Programmming 2019 Fall quarter
+/* Author: Group_G
+/* Copyright 2019
+/* University of California, San Diego
+/*************************************************************************/
+
 #include <time.h>
 #include <windows.h>
 
@@ -16,12 +23,20 @@
 #include <helper_cuda.h>
 #include <helper_functions.h>
 
+#include <stdio.h>
+#include <assert.h>
+#define _USE_MATH_DEFINES // for M_PI
+#include <math.h>
+
 #include "imageLib/Image.h"
 #include "imageLib/ImageIO.h"
 #include "imageLib/Convert.h"
 
 #include "gray_image.h"
 
+// square shape
+#define GAUSSIAN_KERNEL_SIZE 3
+#define SOBEL_FILTER_SIZE 3
 
 #define CHECK(call)                                                            \
 {                                                                              \
@@ -47,6 +62,7 @@ struct timezone
 float *convert_CByteImage_to_array(CByteImage img) {
 	CShape shape = img.Shape();
 	float *array = (float *)malloc(sizeof(float) * shape.width * shape.height);
+    assert(array != NULL);
 
 	for (int x = 0; x < shape.width; x++) {
 		for (int y = 0; y < shape.height; y++) {
@@ -81,6 +97,7 @@ void write_image_to_file(float *x_image, int width, int height, const char *file
 
 	if (from_device) {
 		h_image =  = (float *)malloc(sizeof(float) * width * height);
+        assert(h_image != NULL);
 		CHECK(cudaMemcpy(h_image, x_image, sizeof(float) * width * height, cudaMemcpyDeviceToHost));
 	}
 	else {
@@ -91,7 +108,7 @@ void write_image_to_file(float *x_image, int width, int height, const char *file
 	WriteImage(cbimage, file_name);
 
 	if (from_device)
-		free(h_image);
+        free(h_image);
 }
 
 
