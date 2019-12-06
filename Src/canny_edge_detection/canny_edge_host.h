@@ -32,10 +32,13 @@ public:
 	~canny_edge_host();
 
 	float get_total_time_taken();
+
 	void print_gaussian_kernel();
 	void print_sobel_filters();
+	void print_gaussiated_image();
 
 	void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result);
+	void apply_gaussian_kernel();
 };
 
 #endif //_CANNY_EDGE_HOST_H

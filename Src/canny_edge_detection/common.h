@@ -50,7 +50,6 @@ struct timezone
 
 /* get time of the day
 */
-
 inline int gettimeofday(struct timeval *tv, struct timezone *tz)
 {
     FILETIME ft;
@@ -91,13 +90,27 @@ inline int gettimeofday(struct timeval *tv, struct timezone *tz)
 
 /* get time in seconds
 */
-
 inline double seconds()
 {
     struct timeval tp;
     struct timezone tzp;
     int i = gettimeofday(&tp, &tzp);
     return ((double)tp.tv_sec + (double)tp.tv_usec * 1.e-6);
+}
+
+/* **************************************************************************************************** */
+
+/*  print a matrix given rows and columns
+*/
+inline void print_matrix(float *image, int width, int height){
+    assert(image != NULL);
+
+    for (int r = 0; r < height; r++) {
+        for (int c = 0; c < width; c++) {
+            printf("%.2f ", image[r * width + c]);
+        }
+        printf("\n");
+    }
 }
 
 
