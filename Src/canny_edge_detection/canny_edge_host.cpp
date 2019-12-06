@@ -47,7 +47,7 @@ canny_edge_host::~canny_edge_host() {
 
 /* 	initialize gaussian kernel
 */
-canny_edge_host::init_gaussian_kernel() {
+void canny_edge_host::init_gaussian_kernel() {
 	float stddev = 1.0f;
 	float denominator = 2 * pow(stddev, 2);
 	float sum = 0.0f;
@@ -74,7 +74,7 @@ canny_edge_host::init_gaussian_kernel() {
 /* 	initialize sobel filters
 	https://stackoverflow.com/a/41065243/253056
 */
-canny_edge_host::init_sobel_filters() {
+void canny_edge_host::init_sobel_filters() {
 	int weight = SOBEL_FILTER_SIZE / 2;
 
 	for (int i = 0; i < (SOBEL_FILTER_SIZE * SOBEL_FILTER_SIZE); i++){

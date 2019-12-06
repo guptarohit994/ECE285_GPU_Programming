@@ -15,10 +15,9 @@ source_group("Headers" FILES ${HEADERS})
 
 cuda_add_executable( canny_edge_detection
 ${HEADERS}
+gray_image.cpp
+canny_edge_host.cpp
 main.cpp
-intImage.cpp
-cannyEdgeDevice.cu
-cannyEdgeHost.cpp
 OPTIONS --cudart=shared  -lineinfo -arch sm_52 -use_fast_math -maxrregcount 104
 DEBUG -Xptxas -v -g -G 
 )
@@ -34,8 +33,8 @@ ${NVTX_DEBUG_LIBRARIES}
 ${FREEGLUT_DEBUG_LIBRARIES}
 ${GLEW_DEBUG_LIBRARIES}
 debug ./imageLib/Debug/imageLibd
-debug ${TOP_DIR}/build/thirdparty/lib/libz
-debug ${TOP_DIR}/build/thirdparty/lib/libpng
+debug ../../thirdparty/lib/Debug/libz
+debug ../../thirdparty/lib/Debug/libpng
 )
 
 target_link_libraries( 
@@ -46,8 +45,8 @@ ${CUDA_CURAND_LIBRARY}
 ${FREEGLUT_RELEASE_LIBRARIES}
 ${GLEW_RELEASE_LIBRARIES}
 optimized ./imageLib/Release/imageLib
-optimized ${TOP_DIR}/build/thirdparty/lib/Release/libz
-optimized ${TOP_DIR}/build/thirdparty/lib/Release/libpng
+optimized ../../thirdparty/lib/Release/libz
+optimized ../../thirdparty/lib/Release/libpng
 )
 
 add_subdirectory(imageLib)

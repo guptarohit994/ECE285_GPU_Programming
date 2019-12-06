@@ -11,7 +11,7 @@
 #ifndef __GRAY_IMAGE_H
 #define __GRAY_IMAGE_H
 
-#include <assert.h>
+#include "common.h"
 
 class gray_image {
 	private:

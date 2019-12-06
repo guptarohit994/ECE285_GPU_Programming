@@ -6,8 +6,9 @@
 /*************************************************************************/
 
 #include "utils.h"
+#include "canny_edge_host.h"
 
-#define INPUT_FILE_NAME ""
+#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_project/ECE285_GPU_Programming/Input_images/tree.png"
 
 int main(int argc, char **argv) {
 

@@ -5,10 +5,10 @@
 /* University of California, San Diego
 /*************************************************************************/
 
-#ifndef __CANNY_EDGE_HOST_H
-#define __CANNY_EDGE_HOST_H
+#ifndef _CANNY_EDGE_HOST_H
+#define _CANNY_EDGE_HOST_H
 
-#include "utils.h"
+#include "common.h"
 
 class canny_edge_host {
 	float *image;
@@ -32,4 +32,4 @@ public:
 	float get_total_time_taken();
 };
 
-#endif //__CANNY_EDGE_HOST_H
+#endif //_CANNY_EDGE_HOST_H

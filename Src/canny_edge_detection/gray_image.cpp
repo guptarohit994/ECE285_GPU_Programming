@@ -29,7 +29,7 @@ gray_image::gray_image(float *h_gimage, int width, int height) {
 /* 	destructor
 */
 gray_image::~gray_image() {
-	if (this->h_gimage != NULL) free(h_image);
+	if (this->h_gimage != NULL) free(h_gimage);
 }
 
 /* **************************************************************************************************** */
