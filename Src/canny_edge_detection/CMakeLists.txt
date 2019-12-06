@@ -21,10 +21,15 @@ main.cpp
 OPTIONS --cudart=shared  -lineinfo -arch sm_52 -use_fast_math -maxrregcount 104
 DEBUG -Xptxas -v -g -G 
 )
+add_dependencies(
+canny_edge_detection
+imageLib
+png
+z
+)
 
 target_link_libraries( 
 canny_edge_detection
-
 ${CUDA_CUDA_LIBRARY}
 ${CUDA_CUDART_LIBRARY}
 ${CUDA_CURAND_LIBRARY}
