@@ -246,10 +246,10 @@ void canny_edge_host::calculate_sobel_direction() {
 
 /*	performs non-maximal suppression on the input image and writes into result
 	image should contain direction (sobeled_dir_image)
+	Skips border values
 */
 void canny_edge_host::apply_non_max_suppression(float *image, int image_width, int image_height, float *result) {
 	// TODO check if two for-loops are faster than single loop but more if-conditions
-	
 	// initialize so that unreachable points in next for loop are also 0
 	for (int i = 0; i < (image_width * image_height); i++)
 		result[i] = 0.0f;
@@ -261,8 +261,8 @@ void canny_edge_host::apply_non_max_suppression(float *image, int image_width, i
             // now we selected a tile
             int tile_center_index = iy * image_width + ix;
 
-            float right_value = 1.0f;
-            float left_value = 1.0f;
+            float right_value;
+            float left_value;
 
             // angle 0
             if ((image[tile_center_index] < (float)(1/8)) || (image[tile_center_index] >= (float)(7/8))) {
@@ -272,7 +272,7 @@ void canny_edge_host::apply_non_max_suppression(float *image, int image_width, i
             // angle 45
             else if ((image[tile_center_index] >= (float)(1/8)) && (image[tile_center_index] < (float)(3/8))) {
             	right_value = image[tile_center_index - (image_width - 1)];
-            	left_value = image[tile_center_index + (image_width + 1)];
+            	left_value = image[tile_center_index + (image_width - 1)];
             }
             // angle 90
             else if ((image[tile_center_index] >= (float)(3/8)) && (image[tile_center_index] < (float)(5/8))) {
