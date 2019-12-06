@@ -11,13 +11,26 @@
 #include "common.h"
 
 class canny_edge_host {
+	// input image
 	float *image;
 
 	float *gaussian_kernel;
+	// image with noise reduced
 	float *gaussiated_image;
 
 	float *sobel_filter_x;
 	float *sobel_filter_y;
+	// image with gradients in x (horizontal) direction
+	float *sobeled_grad_x_image;
+	// image with gradients in y (vertical) direction
+	float *sobeled_grad_y_image;
+	// image with gradient magnitude
+	float *sobeled_mag_image;
+	// image with gradient direction
+	float *sobeled_dir_image;
+
+	// image with non-maximal suppression
+	float *non_max_suppressed_image;
 
 	int width;
 	int height;
@@ -39,6 +52,11 @@ public:
 
 	void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result);
 	void apply_gaussian_kernel();
+	void apply_sobel_filter_x();
+	void apply_sobel_filter_y();
+	void calculate_sobel_magnitude();
+	void calculate_sobel_direction();
+	void apply_non_max_suppression(float *image, int image_width, int image_height, float *result);
 };
 
 #endif //_CANNY_EDGE_HOST_H

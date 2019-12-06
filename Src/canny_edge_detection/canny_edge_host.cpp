@@ -36,6 +36,20 @@ canny_edge_host::canny_edge_host(float *image, int width, int height) {
 	this->sobel_filter_y = (float*)malloc(sizeof(float) * SOBEL_FILTER_SIZE * SOBEL_FILTER_SIZE);
 	assert(this->sobel_filter_y!= NULL);
 
+	// allocate for sobeled images (same size as image)
+	this->sobeled_grad_x_image = (float*)malloc(sizeof(float) * width * height);
+	assert(this->sobeled_grad_x_image != NULL);
+	this->sobeled_grad_y_image = (float*)malloc(sizeof(float) * width * height);
+	assert(this->sobeled_grad_y_image != NULL);
+	this->sobeled_mag_image;= (float*)malloc(sizeof(float) * width * height);
+	assert(this->sobeled_mag_image != NULL);
+	this->sobeled_dir_image;= (float*)malloc(sizeof(float) * width * height);
+	assert(this->sobeled_dir_image != NULL);
+
+	// allocate for image after non-maximal suppression (same size as image)
+	this->non_max_suppressed_image = (float*)malloc(sizeof(float) * width * height);
+	assert(this->non_max_suppressed_image != NULL);
+
 	// initialize
 	this->init_gaussian_kernel();
 	this->init_sobel_filters();
@@ -46,8 +60,19 @@ canny_edge_host::canny_edge_host(float *image, int width, int height) {
 /* 	destructor
 */
 canny_edge_host::~canny_edge_host() {
-	if (this->image != NULL) 			free(this->image);
-	if (this->gaussian_kernel != NULL) 	free(this->gaussian_kernel);
+	if (this->image != NULL) 					free(this->image);
+	
+	if (this->gaussian_kernel != NULL) 			free(this->gaussian_kernel);
+	if (this->gaussiated_image != NULL)			free(this->gaussiated_image);
+	
+	if (this->sobel_filter_x != NULL)			free(this->sobel_filter_x);
+	if (this->sobel_filter_y != NULL)			free(this->sobel_filter_y);
+	if (this->sobeled_grad_x_image != NULL)		free(this->sobeled_grad_x_image);
+	if (this->sobeled_grad_y_image != NULL)		free(this->sobeled_grad_y_image);
+	if (this->sobeled_mag_image != NULL)		free(this->sobeled_mag_image);
+	if (this->sobeled_dir_image != NULL)		free(this->sobeled_dir_image);
+
+	if (this->non_max_suppressed_image != NULL)	free(this->non_max_suppressed_image);
 }
 
 /* **************************************************************************************************** */
@@ -174,5 +199,102 @@ void canny_edge_host::do_convolution(float *image, int image_width, int image_he
 */
 void canny_edge_host::apply_gaussian_kernel() {
 	// convolution of image with gaussian kernel
-	do_convolution(this->image, this->width, this->height, this->gaussian_kernel, GAUSSIAN_KERNEL_SIZE, this->gaussiated_image);
+	this->do_convolution(this->image, this->width, this->height, this->gaussian_kernel, GAUSSIAN_KERNEL_SIZE, this->gaussiated_image);
+}
+
+/* **************************************************************************************************** */
+
+/*	apply the sobel_filter_x to the image
+*/
+void canny_edge_host::apply_sobel_filter_x() {
+	// convolution of image with sobel filter in horizontal direction
+	this->do_convolution(this->image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
+}
+/* **************************************************************************************************** */
+
+/*	apply the sobel_filter_y to the image
+*/
+void canny_edge_host::apply_sobel_filter_y() {
+	// convolution of image with sobel filter in vertical direction
+	this->do_convolution(this->image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
+}
+
+/* **************************************************************************************************** */
+
+/*	calculate gradient magnitude after applying sobel filters to the image
+*/
+void canny_edge_host::calculate_sobel_magnitude() {
+	
+	for (int i = 0; i < (this->width * this->height); i++) {
+		this->sobeled_mag_image[i] = sqrt(pow(this->sobeled_grad_x_image[i], 2) + pow(this->sobeled_grad_y_image[i], 2));
+	}
+}
+
+/* **************************************************************************************************** */
+
+/*	calculate gradient direction after applying sobel filters to the image
+	values in radians (normalized, 0 to 1)
+*/
+void canny_edge_host::calculate_sobel_direction() {
+	
+	for (int i = 0; i < (this->width * this->height); i++) {
+		this->sobeled_dir_image[i] = (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI;
+	}
+}
+
+/* **************************************************************************************************** */
+
+/*	performs non-maximal suppression on the input image and writes into result
+	image should contain direction (sobeled_dir_image)
+*/
+void canny_edge_host::apply_non_max_suppression(float *image, int image_width, int image_height, float *result) {
+	// TODO check if two for-loops are faster than single loop but more if-conditions
+	
+	// initialize so that unreachable points in next for loop are also 0
+	for (int i = 0; i < (image_width * image_height); i++)
+		result[i] = 0.0f;
+
+	int window_size = 3; //square window
+    for (int iy = 1; iy <= (image_height - window_size + 1); iy++) {
+        for (int ix = 1; ix <= (image_width - window_size + 1); ix++) {
+
+            // now we selected a tile
+            int tile_center_index = iy * image_width + ix;
+
+            float right_value = 1.0f;
+            float left_value = 1.0f;
+
+            // angle 0
+            if ((image[tile_center_index] < (float)(1/8)) || (image[tile_center_index] >= (float)(7/8))) {
+            	right_value = image[tile_center_index + 1];
+            	left_value = image[tile_center_index - 1];
+            }
+            // angle 45
+            else if ((image[tile_center_index] >= (float)(1/8)) && (image[tile_center_index] < (float)(3/8))) {
+            	right_value = image[tile_center_index - (image_width - 1)];
+            	left_value = image[tile_center_index + (image_width + 1)];
+            }
+            // angle 90
+            else if ((image[tile_center_index] >= (float)(3/8)) && (image[tile_center_index] < (float)(5/8))) {
+            	right_value = image[tile_center_index - image_width];
+            	left_value = image[tile_center_index + image_width];
+            }
+            // angle 135
+            else if ((image[tile_center_index] >= (float)(5/8)) && (image[tile_center_index] < (float)(7/8))) {
+            	right_value = image[tile_center_index - (image_width + 1)];
+            	left_value = image[tile_center_index + (image_width + 1)];
+            }
+            else{
+            	// assert should not be reached
+            	assert(0 > 1);
+            }
+
+            // suppress anything if not the maximum value
+            if ((image[tile_center_index] >= right_value) && (image[tile_center_index] >= left_value))
+            	result[tile_center_index] = image[tile_center_index];
+            else
+            	result[tile_center_index] = 0.0f;
+
+        }
+    }
 }
