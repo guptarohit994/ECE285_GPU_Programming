@@ -62,9 +62,9 @@ public:
 	void apply_sobel_filter_y();
 	void calculate_sobel_magnitude();
 	void calculate_sobel_direction();
-	void apply_non_max_suppression(float *image, int image_width, int image_height, float *result);
-	void apply_double_thresholds(float *image, int image_width, int image_height, float *result);
-	void apply_hysteresis_edge_tracking(float *image, int image_width, int image_height, float *result);
+	void apply_non_max_suppression();
+	void apply_double_thresholds();
+	void apply_hysteresis_edge_tracking();
 };
 
 #endif //_CANNY_EDGE_HOST_H
