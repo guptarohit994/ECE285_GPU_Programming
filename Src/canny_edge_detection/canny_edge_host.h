@@ -32,6 +32,12 @@ class canny_edge_host {
 	// image with non-maximal suppression
 	float *non_max_suppressed_image;
 
+	// image with double thresholds applied
+	float *double_thresholded_image;
+
+	// image with edge tracking using hysteresis applied
+	float *edge_tracked_image;
+
 	int width;
 	int height;
 
@@ -57,6 +63,8 @@ public:
 	void calculate_sobel_magnitude();
 	void calculate_sobel_direction();
 	void apply_non_max_suppression(float *image, int image_width, int image_height, float *result);
+	void apply_double_thresholds(float *image, int image_width, int image_height, float *result);
+	void apply_hysteresis_edge_tracking(float *image, int image_width, int image_height, float *result);
 };
 
 #endif //_CANNY_EDGE_HOST_H

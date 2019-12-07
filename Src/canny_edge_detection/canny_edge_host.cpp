@@ -50,6 +50,14 @@ canny_edge_host::canny_edge_host(float *image, int width, int height) {
 	this->non_max_suppressed_image = (float*)malloc(sizeof(float) * width * height);
 	assert(this->non_max_suppressed_image != NULL);
 
+	// allocate for image after double thresholds applied (same size as image)
+	this->double_thresholded_image = (float*)mallic(sizeof(float) * width * height);
+	assert(this->double_thresholded_image != NULL);
+
+	// allocate for image after edge tracking has been applied (same size as image)
+	this->edge_tracked_image = (float*)malloc(sizeof(float) * width * height);
+	assert(this->edge_tracked_image != NULL);
+
 	// initialize
 	this->init_gaussian_kernel();
 	this->init_sobel_filters();
@@ -73,6 +81,10 @@ canny_edge_host::~canny_edge_host() {
 	if (this->sobeled_dir_image != NULL)		free(this->sobeled_dir_image);
 
 	if (this->non_max_suppressed_image != NULL)	free(this->non_max_suppressed_image);
+
+	if (this->double_thresholded_image != NULL)	free(this->double_thresholded_image);
+
+	if (this->edge_tracked_image != NULL)		free(this->edge_tracked_image);
 }
 
 /* **************************************************************************************************** */
@@ -295,6 +307,68 @@ void canny_edge_host::apply_non_max_suppression(float *image, int image_width, i
             else
             	result[tile_center_index] = 0.0f;
 
+        }
+    }
+}
+
+/* **************************************************************************************************** */
+
+/*	applies the double thresholds to the provided image
+*/
+void canny_edge_host::apply_double_thresholds(float *image, int image_width, int image_height, float *result) {
+	// compute the maximum
+	float max_pixel_val = 0.0f;
+
+	// figure out the max pixel value
+	for (int i = 0; i < (image_width * image_height); i++) {
+		if (image[i] > max_pixel_val)
+			max_pixel_val = image[i]; 
+	}
+
+	float strong_pixel_val = max_pixel_val * STRONG_PIXEL_THRESHOLD;
+	float weak_pixel_val = max_pixel_val * WEAK_PIXEL_THRESHOLD;
+
+	// now, classify each pixel as strong, weak, zero
+	for (int i = 0; i < (image_width * image_height); i++) {
+		if (image[i] >= strong_pixel_val)
+			result[i] = STRONG_PIXEL_VALUE;
+		else if (image[i] >= weak_pixel_val)
+			result[i] = WEAK_PIXEL_VALUE;
+		else
+			result[i] = 0.0f; 
+	}
+}
+
+/* **************************************************************************************************** */
+
+/*	applies edge tracking by hysteresis to the provided image
+	ignores the boundary pixels
+*/
+void canny_edge_host::apply_hysteresis_edge_tracking(float *image, int image_width, int image_height, float *result) {
+
+	int window_size = 3; //square window
+	
+    for (int iy = 1; iy <= (image_height - window_size + 1); iy++) {
+        for (int ix = 1; ix <= (image_width - window_size + 1); ix++) {
+
+        	// selected a tile now
+        	// check if the center is weak
+        	int tile_center_index = iy * image_width + ix;
+        	if (image[tile_center_index] == WEAK_PIXEL_VALUE) {
+        		// check if any strong pixels are there in the vicinity
+        		// start from 0deg, 45, 90, 135
+        		if ((image[tile_center_index + 1] == STRONG_PIXEL_VALUE) 					||
+        			(image[tile_center_index - 1] == STRONG_PIXEL_VALUE)					||
+        			(image[tile_center_index - (image_width - 1)] == STRONG_PIXEL_VALUE)	||
+        			(image[tile_center_index + (image_width - 1)] ==  STRONG_PIXEL_VALUE)	||
+        			(image[tile_center_index - image_width] == STRONG_PIXEL_VALUE)			||
+        			(image[tile_center_index + image_width] == STRONG_PIXEL_VALUE)			||
+        			(image[tile_center_index - (image_width + 1)] == STRONG_PIXEL_VALUE)	||
+        			(image[tile_center_index + (image_width + 1)] == STRONG_PIXEL_VALUE))
+        			result[tile_center_index] = STRONG_PIXEL_VALUE;
+        		else
+        			result[tile_center_index] = 0.0f;
+        	}
         }
     }
 }
