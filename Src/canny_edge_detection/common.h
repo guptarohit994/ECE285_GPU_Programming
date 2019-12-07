@@ -28,6 +28,12 @@
 #define GAUSSIAN_KERNEL_SIZE 3
 #define SOBEL_FILTER_SIZE 3
 
+#define STRONG_PIXEL_THRESHOLD 0.66f
+#define STRONG_PIXEL_VALUE 1.0f
+
+#define WEAK_PIXEL_THRESHOLD 0.33f
+#define WEAK_PIXEL_VALUE 0.1f
+
 #define CHECK(call)                                                            \
 {                                                                              \
     const cudaError_t error = call;                                            \
@@ -113,5 +119,15 @@ inline void print_matrix(float *image, int width, int height){
     }
 }
 
+/* **************************************************************************************************** */
+
+/*  checks if an index is in bounds or not
+*/
+inline bool is_index_correct(int index, int max_elements){
+    if (index >= 0 && index < max_elements)
+        return true;
+    else
+        return false;
+}
 
 #endif //_CUSTOM_COMMON_H
