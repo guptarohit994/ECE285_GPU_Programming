@@ -26,7 +26,7 @@ class gray_image {
 		float *get_host_gimage();
 		int get_width();
 		int get_height();
-		int get_pixel(int x, int y);
+		float get_pixel(int x, int y);
 };
 
 #endif //__GRAY_IMAGE_H

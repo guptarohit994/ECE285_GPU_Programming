@@ -51,7 +51,7 @@ canny_edge_host::canny_edge_host(float *image, int width, int height) {
 	assert(this->non_max_suppressed_image != NULL);
 
 	// allocate for image after double thresholds applied (same size as image)
-	this->double_thresholded_image = (float*)mallic(sizeof(float) * width * height);
+	this->double_thresholded_image = (float*)malloc(sizeof(float) * width * height);
 	assert(this->double_thresholded_image != NULL);
 
 	// allocate for image after edge tracking has been applied (same size as image)
@@ -103,7 +103,7 @@ void canny_edge_host::init_gaussian_kernel() {
 		float numerator = (float) pow(ix - (GAUSSIAN_KERNEL_SIZE/2), 2);
 		numerator += (float) pow(iy - (GAUSSIAN_KERNEL_SIZE/2), 2);
 
-		this->gaussian_kernel[i] = (float) exp( (-1 * numerator)/ denominator) / (M_PI * denominator);
+		this->gaussian_kernel[i] = (float) (exp( (-1 * numerator)/ denominator) / (M_PI * denominator));
 		sum += this->gaussian_kernel[i];
 	}
 
@@ -125,7 +125,7 @@ void canny_edge_host::init_sobel_filters() {
 		int ix = i % SOBEL_FILTER_SIZE;
 		int iy = i / SOBEL_FILTER_SIZE;
 
-		float denominator = (float) pow(ix, 2) + pow(iy, 2);
+		float denominator = (float) (pow(ix, 2) + pow(iy, 2));
 
 		if (denominator == 0.0f){
 			this->sobel_filter_x[i] = 0.0f;

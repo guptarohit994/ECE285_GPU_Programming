@@ -60,6 +60,6 @@ int gray_image::get_height() {
 
 /* 	getter for a pixel from h_gimage
 */
-int gray_image::get_pixel(int x, int y) {
+float gray_image::get_pixel(int x, int y) {
 	return this->h_gimage[y * this->width + x];
 }
