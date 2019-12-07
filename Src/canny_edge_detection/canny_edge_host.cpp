@@ -41,9 +41,9 @@ canny_edge_host::canny_edge_host(float *image, int width, int height) {
 	assert(this->sobeled_grad_x_image != NULL);
 	this->sobeled_grad_y_image = (float*)malloc(sizeof(float) * width * height);
 	assert(this->sobeled_grad_y_image != NULL);
-	this->sobeled_mag_image;= (float*)malloc(sizeof(float) * width * height);
+	this->sobeled_mag_image = (float*)malloc(sizeof(float) * width * height);
 	assert(this->sobeled_mag_image != NULL);
-	this->sobeled_dir_image;= (float*)malloc(sizeof(float) * width * height);
+	this->sobeled_dir_image = (float*)malloc(sizeof(float) * width * height);
 	assert(this->sobeled_dir_image != NULL);
 
 	// allocate for image after non-maximal suppression (same size as image)
@@ -81,17 +81,17 @@ canny_edge_host::~canny_edge_host() {
 */
 void canny_edge_host::init_gaussian_kernel() {
 	float stddev = 1.0f;
-	float denominator = 2 * pow(stddev, 2);
+	float denominator = 2 * (float) pow(stddev, 2);
 	float sum = 0.0f;
 
 	for (int i = 0; i < (GAUSSIAN_KERNEL_SIZE * GAUSSIAN_KERNEL_SIZE); i++){
 		int ix = i % GAUSSIAN_KERNEL_SIZE;
 		int iy = i / GAUSSIAN_KERNEL_SIZE;
 		
-		float numerator = pow(ix - (GAUSSIAN_KERNEL_SIZE/2), 2);
-		numerator += pow(iy - (GAUSSIAN_KERNEL_SIZE/2), 2);
+		float numerator = (float) pow(ix - (GAUSSIAN_KERNEL_SIZE/2), 2);
+		numerator += (float) pow(iy - (GAUSSIAN_KERNEL_SIZE/2), 2);
 
-		this->gaussian_kernel[i] = exp( (-1 * numerator)/ denominator) / (M_PI * denominator);
+		this->gaussian_kernel[i] = (float) exp( (-1 * numerator)/ denominator) / (M_PI * denominator);
 		sum += this->gaussian_kernel[i];
 	}
 
@@ -113,7 +113,7 @@ void canny_edge_host::init_sobel_filters() {
 		int ix = i % SOBEL_FILTER_SIZE;
 		int iy = i / SOBEL_FILTER_SIZE;
 
-		float denominator = pow(ix, 2) + pow(iy, 2);
+		float denominator = (float) pow(ix, 2) + pow(iy, 2);
 
 		if (denominator == 0.0f){
 			this->sobel_filter_x[i] = 0.0f;
@@ -226,7 +226,7 @@ void canny_edge_host::apply_sobel_filter_y() {
 void canny_edge_host::calculate_sobel_magnitude() {
 	
 	for (int i = 0; i < (this->width * this->height); i++) {
-		this->sobeled_mag_image[i] = sqrt(pow(this->sobeled_grad_x_image[i], 2) + pow(this->sobeled_grad_y_image[i], 2));
+		this->sobeled_mag_image[i] = (float) sqrt(pow(this->sobeled_grad_x_image[i], 2) + pow(this->sobeled_grad_y_image[i], 2));
 	}
 }
 
@@ -238,7 +238,7 @@ void canny_edge_host::calculate_sobel_magnitude() {
 void canny_edge_host::calculate_sobel_direction() {
 	
 	for (int i = 0; i < (this->width * this->height); i++) {
-		this->sobeled_dir_image[i] = (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI;
+		this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);
 	}
 }
 
