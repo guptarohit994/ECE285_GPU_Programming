@@ -51,6 +51,14 @@ public:
 	~canny_edge_host();
 
 	float get_total_time_taken();
+	float *get_gaussiated_image();
+	float *get_sobeled_grad_x_image();
+	float *get_sobeled_grad_y_image();
+	float *get_sobeled_mag_image();
+	float *get_sobeled_dir_image();
+	float *get_non_max_suppressed_image();
+	float *get_double_thresholded_image();
+	float *get_edge_tracked_image();
 
 	void print_gaussian_kernel();
 	void print_sobel_filters();

@@ -89,6 +89,46 @@ canny_edge_host::~canny_edge_host() {
 
 /* **************************************************************************************************** */
 
+/*	getters for private vars
+*/
+float canny_edge_host::get_total_time_taken() {
+	return this->total_time_taken;
+}
+
+float* canny_edge_host::get_gaussiated_image() {
+	return this->gaussiated_image;
+}
+
+float* canny_edge_host::get_sobeled_grad_x_image() {
+	return this->sobeled_grad_x_image;
+}
+
+float* canny_edge_host::get_sobeled_grad_y_image() {
+	return this->sobeled_grad_y_image;
+}
+
+float* canny_edge_host::get_sobeled_mag_image() {
+	return this->sobeled_mag_image;
+}
+
+float* canny_edge_host::get_sobeled_dir_image() {
+	return this->sobeled_dir_image;
+}
+
+float* canny_edge_host::get_non_max_suppressed_image() {
+	return this->non_max_suppressed_image;
+}
+
+float* canny_edge_host::get_double_thresholded_image() {
+	return this->double_thresholded_image;
+}
+
+float* canny_edge_host::get_edge_tracked_image() {
+	return this->edge_tracked_image;
+}
+
+/* **************************************************************************************************** */
+
 /* 	initialize gaussian kernel
 */
 void canny_edge_host::init_gaussian_kernel() {
