@@ -50,7 +50,12 @@ public:
 	canny_edge_host(float *image, int width, int height);
 	~canny_edge_host();
 
+	int get_width();
+	int get_height();
 	float get_total_time_taken();
+	float *get_gaussian_kernel();
+	float *get_sobel_filter_x();
+	float *get_sobel_filter_y();
 	float *get_gaussiated_image();
 	float *get_sobeled_grad_x_image();
 	float *get_sobeled_grad_y_image();

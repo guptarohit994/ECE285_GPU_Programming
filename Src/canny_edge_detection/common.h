@@ -27,7 +27,7 @@
 
 // square shape
 #define GAUSSIAN_KERNEL_SIZE 3
-#define SOBEL_FILTER_SIZE 3
+#define SOBEL_FILTER_SIZE 5
 
 #define STRONG_PIXEL_THRESHOLD 0.66f
 #define STRONG_PIXEL_VALUE 1.0f
@@ -107,14 +107,34 @@ inline double seconds()
 
 /* **************************************************************************************************** */
 
+/*  print a matrix given rows and columns to log file
+*/
+inline void print_log_matrix(FILE *f, float *image, int width, int height) {
+	assert(f != NULL);
+
+	assert(image != NULL);
+
+	for (int r = 0; r < height; r++) {
+		for (int c = 0; c < width; c++) {
+			fprintf(f, "%.2f ", image[r * width + c]);
+			printf("%.2f ", image[r * width + c]);
+		}
+		fprintf(f, "\n");
+		printf("\n");
+	}
+}
+
+/* **************************************************************************************************** */
+
 /*  print a matrix given rows and columns
 */
 inline void print_matrix(float *image, int width, int height){
-    assert(image != NULL);
+	
+	assert(image != NULL);
 
     for (int r = 0; r < height; r++) {
         for (int c = 0; c < width; c++) {
-            printf("%.2f ", image[r * width + c]);
+			printf("%.2f ", image[r * width + c]);
         }
         printf("\n");
     }

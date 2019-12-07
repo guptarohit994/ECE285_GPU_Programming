@@ -91,8 +91,28 @@ canny_edge_host::~canny_edge_host() {
 
 /*	getters for private vars
 */
+int canny_edge_host::get_width() {
+	return this->width;
+}
+
+int canny_edge_host::get_height() {
+	return this->height;
+}
+
 float canny_edge_host::get_total_time_taken() {
 	return this->total_time_taken;
+}
+
+float* canny_edge_host::get_gaussian_kernel() {
+	return this->gaussian_kernel;
+}
+
+float* canny_edge_host::get_sobel_filter_x() {
+	return this->sobel_filter_x;
+}
+
+float* canny_edge_host::get_sobel_filter_y() {
+	return this->sobel_filter_y;
 }
 
 float* canny_edge_host::get_gaussiated_image() {
@@ -297,6 +317,7 @@ void canny_edge_host::calculate_sobel_magnitude() {
 void canny_edge_host::calculate_sobel_direction() {
 	
 	for (int i = 0; i < (this->width * this->height); i++) {
+		//printf("i:%d, y:%.2f, x:%.2f, atan():%.2f\n", i, this->sobeled_grad_y_image[i], this->sobeled_grad_x_image[i], (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i])));
 		this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);
 	}
 
