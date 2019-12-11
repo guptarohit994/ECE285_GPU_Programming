@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <cstring>
+#include <chrono> // for high precision timers
 #include <stdio.h>
 #include <assert.h>
 #define _USE_MATH_DEFINES // for M_PI
@@ -29,11 +30,13 @@
 #define GAUSSIAN_KERNEL_SIZE 3
 #define SOBEL_FILTER_SIZE 5
 
-#define STRONG_PIXEL_THRESHOLD 0.66f
 #define STRONG_PIXEL_VALUE 1.0f
-
-#define WEAK_PIXEL_THRESHOLD 0.33f
 #define WEAK_PIXEL_VALUE 0.1f
+
+typedef std::chrono::high_resolution_clock Time;
+#define TIC auto timer_start = Time::now()
+#define TOC auto timer_stop = Time::now()
+#define TIME_DURATION std::chrono::duration<float> time_taken = timer_stop - timer_start
 
 #define CHECK(call)                                                            \
 {                                                                              \
@@ -117,10 +120,10 @@ inline void print_log_matrix(FILE *f, float *image, int width, int height) {
 	for (int r = 0; r < height; r++) {
 		for (int c = 0; c < width; c++) {
 			fprintf(f, "%.2f ", image[r * width + c]);
-			printf("%.2f ", image[r * width + c]);
+			//printf("%.2f ", image[r * width + c]);
 		}
 		fprintf(f, "\n");
-		printf("\n");
+		//printf("\n");
 	}
 }
 

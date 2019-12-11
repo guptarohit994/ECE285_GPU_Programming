@@ -272,8 +272,15 @@ void canny_edge_host::do_convolution(float *image, int image_width, int image_he
 /*	apply the gaussian kernel to the image
 */
 void canny_edge_host::apply_gaussian_kernel() {
+	TIC;
+
 	// convolution of image with gaussian kernel
 	this->do_convolution(this->image, this->width, this->height, this->gaussian_kernel, GAUSSIAN_KERNEL_SIZE, this->gaussiated_image);
+
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 
 	printf("canny_edge_host::apply_gaussian_kernel - done!\n");
 }
@@ -289,6 +296,8 @@ void canny_edge_host::compute_pixel_thresholds() {
 	int image_width = this->width;
 	int image_height = this->height;
 
+	TIC;
+
 	// compute the sum of all pixel values
 	float sum_pixel_val = 0.0f;
 
@@ -300,6 +309,10 @@ void canny_edge_host::compute_pixel_thresholds() {
 	this->strong_pixel_threshold = (0.75f * sum_pixel_val) / (image_width * image_height);
 	this->weak_pixel_threshold = (0.70f * sum_pixel_val) / (image_width * image_height);
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
 }
 
@@ -308,9 +321,15 @@ void canny_edge_host::compute_pixel_thresholds() {
 /*	apply the sobel_filter_x to the image
 */
 void canny_edge_host::apply_sobel_filter_x() {
+	TIC;
+
 	// convolution of image with sobel filter in horizontal direction
 	this->do_convolution(this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::apply_sobel_filter_x - done!\n");
 }
 /* **************************************************************************************************** */
@@ -318,8 +337,15 @@ void canny_edge_host::apply_sobel_filter_x() {
 /*	apply the sobel_filter_y to the image
 */
 void canny_edge_host::apply_sobel_filter_y() {
+	TIC;
+
 	// convolution of image with sobel filter in vertical direction
 	this->do_convolution(this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
+
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::apply_sobel_filter_y - done!\n");
 }
 
@@ -328,11 +354,16 @@ void canny_edge_host::apply_sobel_filter_y() {
 /*	calculate gradient magnitude after applying sobel filters to the image
 */
 void canny_edge_host::calculate_sobel_magnitude() {
-	
+	TIC;
+
 	for (int i = 0; i < (this->width * this->height); i++) {
 		this->sobeled_mag_image[i] = (float) sqrt(pow(this->sobeled_grad_x_image[i], 2) + pow(this->sobeled_grad_y_image[i], 2));
 	}
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::calculate_sobel_magnitude - done!\n");
 }
 
@@ -342,7 +373,8 @@ void canny_edge_host::calculate_sobel_magnitude() {
 	values in radians (normalized, 0 to 1)
 */
 void canny_edge_host::calculate_sobel_direction() {
-	
+	TIC;
+
 	for (int i = 0; i < (this->width * this->height); i++) {
 		//printf("i:%d, y:%.2f, x:%.2f, atan():%.2f\n", i, this->sobeled_grad_y_image[i], this->sobeled_grad_x_image[i], (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i])));
 		/*
@@ -375,6 +407,10 @@ void canny_edge_host::calculate_sobel_direction() {
 			this->sobeled_dir_image[i] += (float)M_PI;
 	}
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::calculate_sobel_direction - done!\n");
 }
 
@@ -385,7 +421,8 @@ void canny_edge_host::calculate_sobel_direction() {
 	Skips border values
 */
 void canny_edge_host::apply_non_max_suppression() {
-	
+	TIC;
+
 	float *mag_image = this->sobeled_mag_image;
 	float *dir_image = this->sobeled_dir_image;
 	int image_width = this->width;
@@ -441,6 +478,10 @@ void canny_edge_host::apply_non_max_suppression() {
         }
     }
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
     printf("canny_edge_host::apply_non_max_suppression - done!\n");
 }
 
@@ -449,6 +490,7 @@ void canny_edge_host::apply_non_max_suppression() {
 /*	applies the double thresholds to the provided image
 */
 void canny_edge_host::apply_double_thresholds() {
+	TIC;
 
 	float *image = this->non_max_suppressed_image;
 	int image_width = this->width;
@@ -492,6 +534,10 @@ void canny_edge_host::apply_double_thresholds() {
 			result[i] = 0.0f; 
 	}
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::apply_double_thresholds - done!\n");
 }
 
@@ -501,6 +547,7 @@ void canny_edge_host::apply_double_thresholds() {
 	ignores the boundary pixels
 */
 void canny_edge_host::apply_hysteresis_edge_tracking() {
+	TIC;
 
 	float *image = this->double_thresholded_image;
 	int image_width = this->width;
@@ -539,5 +586,9 @@ void canny_edge_host::apply_hysteresis_edge_tracking() {
         }
     }
 
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
     printf("canny_edge_host::apply_hysteresis_edge_tracking - done!\n");
 }

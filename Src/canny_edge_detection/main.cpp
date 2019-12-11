@@ -8,7 +8,7 @@
 #include "utils.h"
 #include "canny_edge_host.h"
 
-#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/mercedes_logo_10_10.png"
+#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/range_rover_1920_1080.png"
 #define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_gaussiated.png"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_x.png"
 #define OUTPUT_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_y.png"
@@ -17,7 +17,7 @@
 #define OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_double_thresholded.png"
 #define OUTPUT_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_edge_tracked.png"
 
-#define DEBUG
+//#define DEBUG
 
 int main(int argc, char **argv) {
 
@@ -69,6 +69,8 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height(), OUTPUT_GAUSSIATED_FILE_NAME, false);
 
+	from_host.compute_pixel_thresholds();
+
 	from_host.apply_sobel_filter_x();
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_x_image\n");
@@ -117,8 +119,9 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_host.get_edge_tracked_image(), from_host.get_width(), from_host.get_height(), OUTPUT_EDGE_TRACKED_FILE_NAME, false);
 
-	printf("atan(1.0):%.2f\n", atan(1.0f));
 #ifdef DEBUG
 	fclose(f);
 #endif //DEBUG
+
+	printf("CPU took %.2fms\n", from_host.get_total_time_taken());
 }
