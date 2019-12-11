@@ -185,7 +185,7 @@ void canny_edge_host::init_sobel_filters() {
 		int ix = i % SOBEL_FILTER_SIZE;
 		int iy = i / SOBEL_FILTER_SIZE;
 
-		float denominator = (float) (pow(ix, 2) + pow(iy, 2));
+		float denominator = (float) (pow(ix - weight, 2) + pow(iy - weight, 2));
 
 		if (denominator == 0.0f){
 			this->sobel_filter_x[i] = 0.0f;
