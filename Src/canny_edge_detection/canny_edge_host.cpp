@@ -318,8 +318,12 @@ void canny_edge_host::calculate_sobel_direction() {
 	
 	for (int i = 0; i < (this->width * this->height); i++) {
 		//printf("i:%d, y:%.2f, x:%.2f, atan():%.2f\n", i, this->sobeled_grad_y_image[i], this->sobeled_grad_x_image[i], (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i])));
-		this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);
-	}
+		if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] < 0)
+            this->sobeled_dir_image[i] = (float) (((-1 * M_PI/2) + (M_PI/2)) / M_PI);
+        else if (this->sobeled_grad_x_image[i] == 0)
+            this->sobeled_dir_image[i] = (float) (((M_PI/2) + (M_PI/2)) / M_PI);
+        else
+            this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);	}
 
 	printf("canny_edge_host::calculate_sobel_direction - done\n");
 }
