@@ -50,6 +50,8 @@ typedef std::chrono::high_resolution_clock Time;
     }                                                                          \
 }
 
+#define MAX(num1, num2) ((num1 > num2) ? num1 : num2)
+
 struct timezone
 {
     int  tz_minuteswest; /* minutes W of Greenwich */

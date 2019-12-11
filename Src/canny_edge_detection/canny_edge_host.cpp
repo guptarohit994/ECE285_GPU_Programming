@@ -156,22 +156,15 @@ float* canny_edge_host::get_edge_tracked_image() {
 void canny_edge_host::init_gaussian_kernel() {
 	float stddev = 1.0f;
 	float denominator = 2 * (float) pow(stddev, 2);
-	float sum = 0.0f;
+	int weight = GAUSSIAN_KERNEL_SIZE / 2;
 
 	for (int i = 0; i < (GAUSSIAN_KERNEL_SIZE * GAUSSIAN_KERNEL_SIZE); i++){
 		int ix = i % GAUSSIAN_KERNEL_SIZE;
 		int iy = i / GAUSSIAN_KERNEL_SIZE;
-		
-		float numerator = (float) pow(ix - (GAUSSIAN_KERNEL_SIZE/2), 2);
-		numerator += (float) pow(iy - (GAUSSIAN_KERNEL_SIZE/2), 2);
+
+		float numerator = (float) (pow(ix - weight, 2) + pow(iy - weight, 2));
 
 		this->gaussian_kernel[i] = (float) (exp( (-1 * numerator)/ denominator) / (M_PI * denominator));
-		sum += this->gaussian_kernel[i];
-	}
-
-	// normalize
-	for (int i = 0; i < (GAUSSIAN_KERNEL_SIZE * GAUSSIAN_KERNEL_SIZE); i++){
-		this->gaussian_kernel[i] /= sum;
 	}
 }
 
@@ -332,6 +325,7 @@ void canny_edge_host::apply_sobel_filter_x() {
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_host::apply_sobel_filter_x - done!\n");
 }
+
 /* **************************************************************************************************** */
 
 /*	apply the sobel_filter_y to the image
