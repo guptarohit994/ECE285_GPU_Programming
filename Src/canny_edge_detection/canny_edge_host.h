@@ -40,6 +40,8 @@ class canny_edge_host {
 
 	int width;
 	int height;
+	float strong_pixel_threshold;
+	float weak_pixel_threshold;
 
 	float total_time_taken;
 
@@ -71,6 +73,7 @@ public:
 
 	void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result);
 	void apply_gaussian_kernel();
+	void compute_pixel_thresholds();
 	void apply_sobel_filter_x();
 	void apply_sobel_filter_y();
 	void calculate_sobel_magnitude();

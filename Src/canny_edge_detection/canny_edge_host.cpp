@@ -22,6 +22,8 @@ canny_edge_host::canny_edge_host(float *image, int width, int height) {
 	this->width = width;
 	this->height = height;
 	this->total_time_taken = 0.0f;
+	this->strong_pixel_threshold = 0.0f;
+	this->weak_pixel_threshold = 0.0f;
 	
 	// allocate for gaussian_kernel
 	this->gaussian_kernel = (float*)malloc(sizeof(float) * GAUSSIAN_KERNEL_SIZE * GAUSSIAN_KERNEL_SIZE);
@@ -278,13 +280,38 @@ void canny_edge_host::apply_gaussian_kernel() {
 
 /* **************************************************************************************************** */
 
+/*	calculate the thresholds using the gaussiated image.
+	Constants are tuned
+*/
+
+void canny_edge_host::compute_pixel_thresholds() {
+	float *image = this->gaussiated_image;
+	int image_width = this->width;
+	int image_height = this->height;
+
+	// compute the sum of all pixel values
+	float sum_pixel_val = 0.0f;
+
+	// figure out the max pixel value and also compute thresholds
+	for (int i = 0; i < (image_width * image_height); i++) {
+		sum_pixel_val += image[i];
+	}
+
+	this->strong_pixel_threshold = (0.75f * sum_pixel_val) / (image_width * image_height);
+	this->weak_pixel_threshold = (0.70f * sum_pixel_val) / (image_width * image_height);
+
+	printf("canny_edge_host::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
+}
+
+/* **************************************************************************************************** */
+
 /*	apply the sobel_filter_x to the image
 */
 void canny_edge_host::apply_sobel_filter_x() {
 	// convolution of image with sobel filter in horizontal direction
 	this->do_convolution(this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
 
-	printf("canny_edge_host::apply_sobel_filter_x - done\n");
+	printf("canny_edge_host::apply_sobel_filter_x - done!\n");
 }
 /* **************************************************************************************************** */
 
@@ -293,7 +320,7 @@ void canny_edge_host::apply_sobel_filter_x() {
 void canny_edge_host::apply_sobel_filter_y() {
 	// convolution of image with sobel filter in vertical direction
 	this->do_convolution(this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
-	printf("canny_edge_host::apply_sobel_filter_y - done\n");
+	printf("canny_edge_host::apply_sobel_filter_y - done!\n");
 }
 
 /* **************************************************************************************************** */
@@ -306,7 +333,7 @@ void canny_edge_host::calculate_sobel_magnitude() {
 		this->sobeled_mag_image[i] = (float) sqrt(pow(this->sobeled_grad_x_image[i], 2) + pow(this->sobeled_grad_y_image[i], 2));
 	}
 
-	printf("canny_edge_host::calculate_sobel_magnitude - done\n");
+	printf("canny_edge_host::calculate_sobel_magnitude - done!\n");
 }
 
 /* **************************************************************************************************** */
@@ -318,14 +345,37 @@ void canny_edge_host::calculate_sobel_direction() {
 	
 	for (int i = 0; i < (this->width * this->height); i++) {
 		//printf("i:%d, y:%.2f, x:%.2f, atan():%.2f\n", i, this->sobeled_grad_y_image[i], this->sobeled_grad_x_image[i], (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i])));
+		/*
 		if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] < 0)
-            this->sobeled_dir_image[i] = (float) (((-1 * M_PI/2) + (M_PI/2)) / M_PI);
-        else if (this->sobeled_grad_x_image[i] == 0)
-            this->sobeled_dir_image[i] = (float) (((M_PI/2) + (M_PI/2)) / M_PI);
-        else
-            this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);	}
+			this->sobeled_dir_image[i] = (float) (((-1 * M_PI/2) + (M_PI/2)) / M_PI);
+		else if (this->sobeled_grad_x_image[i] == 0)
+			this->sobeled_dir_image[i] = (float) (((M_PI/2) + (M_PI/2)) / M_PI);
+		else
+			this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);	}
+		*/
 
-	printf("canny_edge_host::calculate_sobel_direction - done\n");
+		// implementation of atan2 - https://en.wikipedia.org/wiki/Atan2
+		if (this->sobeled_grad_x_image[i] > 0)
+			this->sobeled_dir_image[i] = (float)(atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]));
+		else if (this->sobeled_grad_x_image[i] < 0 && this->sobeled_grad_y_image[i] >= 0)
+			this->sobeled_dir_image[i] = (float)(atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + M_PI);
+		else if (this->sobeled_grad_x_image[i] < 0 && this->sobeled_grad_y_image[i] < 0)
+			this->sobeled_dir_image[i] = (float)(atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) - M_PI);
+		else if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] > 0)
+			this->sobeled_dir_image[i] = (float)(M_PI / 2);
+		else if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] < 0)
+			this->sobeled_dir_image[i] = (float)(-1 * M_PI / 2);
+		else if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] == 0)
+			this->sobeled_dir_image[i] = 0.0f;
+		else
+			assert(1 < 0);
+
+		// squeezing it back into 0 to pi
+		if (this->sobeled_dir_image[i] < 0)
+			this->sobeled_dir_image[i] += (float)M_PI;
+	}
+
+	printf("canny_edge_host::calculate_sobel_direction - done!\n");
 }
 
 /* **************************************************************************************************** */
@@ -391,7 +441,7 @@ void canny_edge_host::apply_non_max_suppression() {
         }
     }
 
-    printf("canny_edge_host::apply_non_max_suppression - done\n");
+    printf("canny_edge_host::apply_non_max_suppression - done!\n");
 }
 
 /* **************************************************************************************************** */
@@ -399,12 +449,13 @@ void canny_edge_host::apply_non_max_suppression() {
 /*	applies the double thresholds to the provided image
 */
 void canny_edge_host::apply_double_thresholds() {
-	
+
 	float *image = this->non_max_suppressed_image;
 	int image_width = this->width;
 	int image_height = this->height;
 	float *result = this->double_thresholded_image;
 
+	/*
 	// compute the maximum
 	float max_pixel_val = 0.0f;
 
@@ -414,20 +465,34 @@ void canny_edge_host::apply_double_thresholds() {
 			max_pixel_val = image[i]; 
 	}
 
-	float strong_pixel_val = max_pixel_val * STRONG_PIXEL_THRESHOLD;
-	float weak_pixel_val = max_pixel_val * WEAK_PIXEL_THRESHOLD;
+	
+	// compute the sum of all pixel values
+	float sum_pixel_val = 0.0f;
+
+	// figure out the max pixel value and also compute thresholds
+	for (int i = 0; i < (image_width * image_height); i++) {
+		sum_pixel_val += image[i];
+	}
+
+	this->strong_pixel_threshold = 0.30f * max_pixel_val;// (sum_pixel_val) / (image_width * image_height);
+	this->weak_pixel_threshold = this->strong_pixel_threshold * 0.17f;
+	*/
+
+	printf("canny_edge_host::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
+
+
 
 	// now, classify each pixel as strong, weak, zero
 	for (int i = 0; i < (image_width * image_height); i++) {
-		if (image[i] >= strong_pixel_val)
+		if (image[i] >= this->strong_pixel_threshold)
 			result[i] = STRONG_PIXEL_VALUE;
-		else if (image[i] >= weak_pixel_val)
+		else if (image[i] >= this->weak_pixel_threshold)
 			result[i] = WEAK_PIXEL_VALUE;
 		else
 			result[i] = 0.0f; 
 	}
 
-	printf("canny_edge_host::apply_double_thresholds - done\n");
+	printf("canny_edge_host::apply_double_thresholds - done!\n");
 }
 
 /* **************************************************************************************************** */
@@ -442,6 +507,10 @@ void canny_edge_host::apply_hysteresis_edge_tracking() {
 	int image_height = this->height;
 	float *result = this->edge_tracked_image;
 
+	// init as double thresholds
+	for (int i = 0; i < (image_width * image_height); i++)
+		result[i] = this->double_thresholded_image[i];
+
 	int window_size = 3; //square window
 	
     for (int iy = 1; iy <= (image_height - window_size + 1); iy++) {
@@ -453,20 +522,22 @@ void canny_edge_host::apply_hysteresis_edge_tracking() {
         	if (image[tile_center_index] == WEAK_PIXEL_VALUE) {
         		// check if any strong pixels are there in the vicinity
         		// start from 0deg, 45, 90, 135
-        		if ((image[tile_center_index + 1] == STRONG_PIXEL_VALUE) 					||
-        			(image[tile_center_index - 1] == STRONG_PIXEL_VALUE)					||
-        			(image[tile_center_index - (image_width - 1)] == STRONG_PIXEL_VALUE)	||
-        			(image[tile_center_index + (image_width - 1)] ==  STRONG_PIXEL_VALUE)	||
-        			(image[tile_center_index - image_width] == STRONG_PIXEL_VALUE)			||
-        			(image[tile_center_index + image_width] == STRONG_PIXEL_VALUE)			||
-        			(image[tile_center_index - (image_width + 1)] == STRONG_PIXEL_VALUE)	||
-        			(image[tile_center_index + (image_width + 1)] == STRONG_PIXEL_VALUE))
-        			result[tile_center_index] = STRONG_PIXEL_VALUE;
+				if ((image[tile_center_index + 1] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index - 1] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index - (image_width - 1)] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index + (image_width - 1)] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index - image_width] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index + image_width] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index - (image_width + 1)] == STRONG_PIXEL_VALUE) ||
+					(image[tile_center_index + (image_width + 1)] == STRONG_PIXEL_VALUE)) {
+					result[tile_center_index] = STRONG_PIXEL_VALUE;
+					//printf("%d\n", tile_center_index);
+				}
         		else
         			result[tile_center_index] = 0.0f;
         	}
         }
     }
 
-    printf("canny_edge_host::apply_hysteresis_edge_tracking - done\n");
+    printf("canny_edge_host::apply_hysteresis_edge_tracking - done!\n");
 }
