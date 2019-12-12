@@ -9,7 +9,7 @@
 #include "canny_edge_host.h"
 #include "canny_edge_device.h"
 
-#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/mercedes_logo_20_20.png"
+#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/daimler_800_410.png"//daimler_800_410, mercedes_logo_20_20
 #define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_gaussiated.png"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_x.png"
 #define OUTPUT_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_y.png"
@@ -26,13 +26,13 @@
 #define OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_double_thresholded_cuda.png"
 #define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_edge_tracked_cuda.png"
 
-#define DEBUG
+//#define DEBUG
 
 int main(int argc, char **argv) {
 
 #ifdef DEBUG
 	char file_name[50];
-	sprintf(file_name, "../../../Output_images/log_ours.txt");
+	sprintf(file_name, "../../../Output_images/log_host.txt");
 
 	FILE *f = fopen(file_name, "w");
 #endif //DEBUG
@@ -56,8 +56,8 @@ int main(int argc, char **argv) {
 	canny_edge_host from_host = canny_edge_host(gimage.get_host_gimage(), gimage.get_width(), gimage.get_height());
 
 #ifdef DEBUG
-	fprintf(f, "image %s\n", INPUT_FILE_NAME);
-	print_log_matrix(f, gimage.get_host_gimage(), from_host.get_width(), from_host.get_height());
+	//fprintf(f, "image %s\n", INPUT_FILE_NAME);
+	//print_log_matrix(f, gimage.get_host_gimage(), from_host.get_width(), from_host.get_height());
 
 	fprintf(f, "gaussian_kernel\n");
 	print_log_matrix(f, from_host.get_gaussian_kernel(), GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE);
@@ -130,7 +130,16 @@ int main(int argc, char **argv) {
 
 	printf("CPU took %.2fms\n", from_host.get_total_time_taken());
 
+#ifdef DEBUG
+	fclose(f);
+#endif //DEBUG
+
 	// ##################################################################################################
+#ifdef DEBUG
+	sprintf(file_name, "../../../Output_images_cuda/log_device.txt");
+
+	f = fopen(file_name, "w");
+#endif //DEBUG
 	canny_edge_device from_device = canny_edge_device(gimage.get_host_gimage(), gimage.get_width(), gimage.get_height());
 
 #ifdef DEBUG
@@ -166,6 +175,7 @@ int main(int argc, char **argv) {
 	from_device.compute_pixel_thresholds();
 
 	from_device.apply_sobel_filter_x();
+	CHECK(cudaMemcpy(from_device.get_sobeled_grad_x_image(), from_host.get_sobeled_grad_x_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_x_image_cuda\n");
 	float *sobeled_grad_x_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
@@ -176,6 +186,7 @@ int main(int argc, char **argv) {
 	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, true);
 
 	from_device.apply_sobel_filter_y();
+	CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_y_image_cuda\n");
 	float *sobeled_grad_y_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
@@ -202,6 +213,38 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, sobeled_dir_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_dir_image_temp);
 #endif //DEBUG
+
+	from_device.apply_non_max_suppression();
+#ifdef DEBUG
+	fprintf(f, "non_max_suppressed_image_cuda\n");
+	float *non_max_suppressed_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(non_max_suppressed_image_temp, from_device.get_non_max_suppressed_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, non_max_suppressed_image_temp, from_device.get_width(), from_device.get_height());
+	free(non_max_suppressed_image_temp);
+#endif //DEBUG
+	write_image_to_file(from_device.get_non_max_suppressed_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME, true);
+
+	from_device.apply_double_thresholds();
+#ifdef DEBUG
+	fprintf(f, "double_thresholded_image_cuda\n");
+	float *double_thresholded_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(double_thresholded_image_temp, from_device.get_double_thresholded_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, double_thresholded_image_temp, from_device.get_width(), from_device.get_height());
+	free(double_thresholded_image_temp);
+#endif //DEBUG
+	write_image_to_file(from_device.get_double_thresholded_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME, true);
+
+	from_device.apply_hysteresis_edge_tracking();
+#ifdef DEBUG
+	fprintf(f, "edge_tracked_image_cuda\n");
+	float *edge_tracked_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(edge_tracked_image_temp, from_device.get_edge_tracked_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, edge_tracked_image_temp, from_device.get_width(), from_device.get_height());
+	free(edge_tracked_image_temp);
+#endif //DEBUG
+	write_image_to_file(from_device.get_edge_tracked_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME, true);
+
+	printf("CUDA took %.2fms\n", from_device.get_total_time_taken());
 
 #ifdef DEBUG
 	fclose(f);

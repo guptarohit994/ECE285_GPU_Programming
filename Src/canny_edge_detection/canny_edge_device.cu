@@ -392,9 +392,9 @@ void canny_edge_device::calculate_sobel_magnitude() {
 	TIC_CUDA(start);
 
 	int total_pixels = (this->width * this->height);
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
+	dim3 block(MIN(256, total_pixels));
 	dim3 grid((total_pixels + block.x - 1) / block.x);
-
+	printf("grid.x:%d, grid.y:%d, block.x:%d, block.y:%d\n", grid.x, grid.y, block.x, block.y);
 	calculate_sobel_magnitude_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
 
 	TOC_CUDA(stop);
@@ -444,7 +444,7 @@ void canny_edge_device::calculate_sobel_direction() {
 	TIC_CUDA(start);
 
 	int total_pixels = (this->width * this->height);
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
+	dim3 block(MIN(256, total_pixels));
 	dim3 grid((total_pixels + block.x - 1) / block.x);
 
 	calculate_sobel_direction_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_dir_image, this->width, this->height);
@@ -535,7 +535,7 @@ void canny_edge_device::apply_non_max_suppression() {
 	int total_windows = total_windows_x * total_windows_y;
 
 
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_windows));
+	dim3 block(MIN(256, total_windows));
 	dim3 grid((total_windows + block.x - 1) / block.x);
     apply_non_max_suppression_cuda <<< grid, block >>> (dir_image, mag_image, image_width, image_height, result);
 
@@ -577,7 +577,7 @@ void canny_edge_device::apply_double_thresholds() {
 	TIC_CUDA(start);
 
 	int total_pixels = (this->width * this->height);
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
+	dim3 block(MIN(256, total_pixels));
 	dim3 grid((total_pixels + block.x - 1) / block.x);
 
 	apply_double_thresholds_cuda << < grid, block >> > (this->non_max_suppressed_image, this->width, this->height, this->strong_pixel_threshold, this->weak_pixel_threshold, this->double_thresholded_image);
@@ -650,7 +650,7 @@ void canny_edge_device::apply_hysteresis_edge_tracking() {
 	int total_windows = total_windows_x * total_windows_y;
 
 
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_windows));
+	dim3 block(MIN(256, total_windows));
 	dim3 grid((total_windows + block.x - 1) / block.x);
 	apply_hysteresis_edge_tracking_cuda << < grid, block >> > (this->double_thresholded_image, this->width, this->height, this->edge_tracked_image);
 	
