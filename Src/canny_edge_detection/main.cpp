@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height(), OUTPUT_GAUSSIATED_FILE_NAME, false);
 
-	from_host.compute_pixel_thresholds();
+	//from_host.compute_pixel_thresholds();
 
 	from_host.apply_sobel_filter_x();
 #ifdef DEBUG
@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
 	write_image_to_file(from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height(), OUTPUT_NON_MAX_SUPPRESSED_FILE_NAME, false);
+
+	from_host.compute_pixel_thresholds();
 
 	from_host.apply_double_thresholds();
 #ifdef DEBUG
@@ -172,10 +174,10 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_device.get_gaussiated_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_GAUSSIATED_FILE_NAME, true);
 
-	from_device.compute_pixel_thresholds();
+	//from_device.compute_pixel_thresholds();
 
 	from_device.apply_sobel_filter_x();
-	CHECK(cudaMemcpy(from_device.get_sobeled_grad_x_image(), from_host.get_sobeled_grad_x_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
+	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_x_image(), from_host.get_sobeled_grad_x_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_x_image_cuda\n");
 	float *sobeled_grad_x_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
@@ -186,7 +188,7 @@ int main(int argc, char **argv) {
 	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, true);
 
 	from_device.apply_sobel_filter_y();
-	CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
+	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_y_image_cuda\n");
 	float *sobeled_grad_y_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
@@ -223,6 +225,8 @@ int main(int argc, char **argv) {
 	free(non_max_suppressed_image_temp);
 #endif //DEBUG
 	write_image_to_file(from_device.get_non_max_suppressed_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME, true);
+
+	from_device.compute_pixel_thresholds();
 
 	from_device.apply_double_thresholds();
 #ifdef DEBUG

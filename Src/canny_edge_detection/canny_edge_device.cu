@@ -286,41 +286,6 @@ void canny_edge_device::apply_gaussian_kernel() {
 
 /* **************************************************************************************************** */
 
-/*	calculate the thresholds using the gaussiated image.
-	Constants are tuned
-	TODO would it benefit from a kernel
-*/
-
-void canny_edge_device::compute_pixel_thresholds() {
-
-	int image_width = this->width;
-	int image_height = this->height;
-	float *image = (float*)malloc(sizeof(float) * image_width * image_height);
-	CHECK(cudaMemcpy(image, this->gaussiated_image, sizeof(float) * image_width * image_height, cudaMemcpyDeviceToHost));
-
-	TIC;
-
-	// compute the sum of all pixel values
-	float sum_pixel_val = 0.0f;
-
-	// figure out the max pixel value and also compute thresholds
-	for (int i = 0; i < (image_width * image_height); i++) {
-		sum_pixel_val += image[i];
-	}
-
-	this->strong_pixel_threshold = (0.66f * sum_pixel_val) / (image_width * image_height);
-	this->weak_pixel_threshold = (0.33f * sum_pixel_val) / (image_width * image_height);
-
-	TOC;
-
-	TIME_DURATION;
-	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_device::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
-	free(image);
-}
-
-/* **************************************************************************************************** */
-
 /*	apply the sobel_filter_x to the image
 */
 void canny_edge_device::apply_sobel_filter_x() {
@@ -547,6 +512,40 @@ void canny_edge_device::apply_non_max_suppression() {
     printf("canny_edge_device::apply_non_max_suppression - done in %.5f ms\n", miliseconds);
 }
 
+/* **************************************************************************************************** */
+
+/*	calculate the thresholds using the gaussiated image.
+Constants are tuned
+TODO would it benefit from a kernel
+*/
+
+void canny_edge_device::compute_pixel_thresholds() {
+
+	int image_width = this->width;
+	int image_height = this->height;
+	float *image = (float*)malloc(sizeof(float) * image_width * image_height);
+	CHECK(cudaMemcpy(image, this->non_max_suppressed_image, sizeof(float) * image_width * image_height, cudaMemcpyDeviceToHost));
+
+	TIC;
+
+	// compute the sum of all pixel values
+	float sum_pixel_val = 0.0f;
+
+	// figure out the max pixel value and also compute thresholds
+	for (int i = 0; i < (image_width * image_height); i++) {
+		sum_pixel_val += image[i];
+	}
+
+	this->strong_pixel_threshold = (STRONG_FRACTION_OF_AVERAGE * sum_pixel_val) / (image_width * image_height);
+	this->weak_pixel_threshold = (WEAK_FRACTION_OF_STRONG * sum_pixel_val) / (image_width * image_height);
+
+	TOC;
+
+	TIME_DURATION;
+	this->total_time_taken += time_taken.count() * 1000; // convert to ms
+	printf("canny_edge_device::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
+	free(image);
+}
 /* **************************************************************************************************** */
 
 __global__

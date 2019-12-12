@@ -285,7 +285,7 @@ void canny_edge_host::apply_gaussian_kernel() {
 */
 
 void canny_edge_host::compute_pixel_thresholds() {
-	float *image = this->gaussiated_image;
+	float *image = this->non_max_suppressed_image;
 	int image_width = this->width;
 	int image_height = this->height;
 
@@ -299,8 +299,8 @@ void canny_edge_host::compute_pixel_thresholds() {
 		sum_pixel_val += image[i];
 	}
 
-	this->strong_pixel_threshold = (0.66f * sum_pixel_val) / (image_width * image_height);
-	this->weak_pixel_threshold = (0.33f * sum_pixel_val) / (image_width * image_height);
+	this->strong_pixel_threshold = (STRONG_FRACTION_OF_AVERAGE * sum_pixel_val) / (image_width * image_height);
+	this->weak_pixel_threshold = (WEAK_FRACTION_OF_STRONG * sum_pixel_val) / (image_width * image_height);
 
 	TOC;
 
