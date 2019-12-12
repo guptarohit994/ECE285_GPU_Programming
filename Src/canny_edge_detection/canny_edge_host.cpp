@@ -306,7 +306,7 @@ void canny_edge_host::compute_pixel_thresholds() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_host::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
+	printf("canny_edge_host::compute_pixel_thresholds - (weak:%.2f, strong:%.2f) - done in %.2f ms\n", this->weak_pixel_threshold, this->strong_pixel_threshold, time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */

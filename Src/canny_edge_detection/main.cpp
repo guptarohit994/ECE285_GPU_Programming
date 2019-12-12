@@ -9,7 +9,7 @@
 #include "canny_edge_host.h"
 #include "canny_edge_device.h"
 
-#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/daimler_800_410.png"//daimler_800_410, mercedes_logo_20_20
+#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/daimler_800_410.png"//daimler_800_410, mercedes_logo_20_20, ece_building, range_rover_1920_1080
 #define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_gaussiated.png"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_x.png"
 #define OUTPUT_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_y.png"
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 								   cbimage_gray_shape.width, 				  \
 								   cbimage_gray_shape.height);
 
-	printf("Successfully loaded %s of height:%d, width:%d\n", INPUT_FILE_NAME, gimage.get_height(), gimage.get_width());
+	printf("Successfully loaded %s of height:%d, width:%d\n\n\n", INPUT_FILE_NAME, gimage.get_height(), gimage.get_width());
 
 	canny_edge_host from_host = canny_edge_host(gimage.get_host_gimage(), gimage.get_width(), gimage.get_height());
 
@@ -66,9 +66,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, from_host.get_sobel_filter_x(), SOBEL_FILTER_SIZE, SOBEL_FILTER_SIZE);
 	fprintf(f, "sobel_filter_y\n");
 	print_log_matrix(f, from_host.get_sobel_filter_y(), SOBEL_FILTER_SIZE, SOBEL_FILTER_SIZE);
-#else
-	from_host.print_gaussian_kernel();
-	from_host.print_sobel_filters();
+//	from_host.print_gaussian_kernel();
+//	from_host.print_sobel_filters();
 #endif //DEBUG
 
 	from_host.apply_gaussian_kernel();
@@ -130,7 +129,7 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_host.get_edge_tracked_image(), from_host.get_width(), from_host.get_height(), OUTPUT_EDGE_TRACKED_FILE_NAME, false);
 
-	printf("CPU took %.2fms\n", from_host.get_total_time_taken());
+	printf("\nCPU took %.2fms\n\n\n", from_host.get_total_time_taken());
 
 #ifdef DEBUG
 	fclose(f);
@@ -174,7 +173,7 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_device.get_gaussiated_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_GAUSSIATED_FILE_NAME, true);
 
-	//from_device.compute_pixel_thresholds();
+	from_device.compute_pixel_thresholds();
 
 	from_device.apply_sobel_filter_x();
 	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_x_image(), from_host.get_sobeled_grad_x_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
@@ -226,7 +225,7 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_device.get_non_max_suppressed_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME, true);
 
-	from_device.compute_pixel_thresholds();
+	//from_device.compute_pixel_thresholds();
 
 	from_device.apply_double_thresholds();
 #ifdef DEBUG
@@ -248,7 +247,7 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_device.get_edge_tracked_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME, true);
 
-	printf("CUDA took %.2fms\n", from_device.get_total_time_taken());
+	printf("\nCUDA took %.2fms\n", from_device.get_total_time_taken());
 
 #ifdef DEBUG
 	fclose(f);

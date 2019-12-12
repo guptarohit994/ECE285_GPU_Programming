@@ -514,37 +514,84 @@ void canny_edge_device::apply_non_max_suppression() {
 
 /* **************************************************************************************************** */
 
+// Interleaved Pair Implementation with less divergence
+__global__ 
+void compute_pixel_thresholds_cuda(float *image, int image_width, int image_height, float *result) {
+	// set thread ID
+	unsigned int tid = threadIdx.x;
+	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	// convert global data pointer to the local pointer of this block
+	float *idata = image + blockIdx.x * blockDim.x;
+
+	// boundary check
+	if (idx >= (image_width * image_height)) 
+		return;
+
+	// in-place reduction in global memory
+	for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+		if (tid < stride) {
+			idata[tid] += idata[tid + stride];
+		}
+
+		__syncthreads();
+	}
+
+	// write result for this block to global mem
+	if (tid == 0) 
+		result[blockIdx.x] = idata[0];
+}
+
+/* **************************************************************************************************** */
+
 /*	calculate the thresholds using the gaussiated image.
-Constants are tuned
-TODO would it benefit from a kernel
+	Constants are tuned
 */
 
 void canny_edge_device::compute_pixel_thresholds() {
 
 	int image_width = this->width;
 	int image_height = this->height;
-	float *image = (float*)malloc(sizeof(float) * image_width * image_height);
-	CHECK(cudaMemcpy(image, this->non_max_suppressed_image, sizeof(float) * image_width * image_height, cudaMemcpyDeviceToHost));
-
-	TIC;
-
-	// compute the sum of all pixel values
+	int total_pixels = image_width * image_height;
 	float sum_pixel_val = 0.0f;
 
-	// figure out the max pixel value and also compute thresholds
-	for (int i = 0; i < (image_width * image_height); i++) {
-		sum_pixel_val += image[i];
-	}
+	dim3 block(512);
+	dim3 grid((total_pixels + block.x - 1) / block.x);
 
+	float *h_output = (float *)malloc(sizeof(float) * grid.x);
+	float *d_output;
+	float *d_image;
+
+	CHECK(cudaMalloc((void **)&d_image, sizeof(float) * total_pixels));
+	CHECK(cudaMalloc((void **)&d_output, sizeof(float) * grid.x));
+
+	cudaEvent_t start, stop;
+	CLOCK_CUDA_INIT(start, stop);
+
+	TIC_CUDA(start);
+
+	CHECK(cudaMemcpy(d_image, this->gaussiated_image, sizeof(float) * total_pixels, cudaMemcpyDeviceToDevice));
+
+	compute_pixel_thresholds_cuda << < grid, block >> > (d_image, image_width, image_height, d_output);
+
+	CHECK(cudaMemcpy(h_output, d_output, sizeof(float) * grid.x, cudaMemcpyDeviceToHost));
+
+	for (int i = 0; i < grid.x; i++)
+		sum_pixel_val += h_output[i];
+
+	TOC_CUDA(stop);
+
+	float miliseconds = 0;
+	TIME_DURATION_CUDA(miliseconds, start, stop);
+	this->total_time_taken += miliseconds;
+	
 	this->strong_pixel_threshold = (STRONG_FRACTION_OF_AVERAGE * sum_pixel_val) / (image_width * image_height);
 	this->weak_pixel_threshold = (WEAK_FRACTION_OF_STRONG * sum_pixel_val) / (image_width * image_height);
 
-	TOC;
-
-	TIME_DURATION;
-	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_device::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
-	free(image);
+	printf("canny_edge_device::compute_pixel_thresholds - (weak:%.2f, strong:%.2f) - done in %.5f ms\n", this->weak_pixel_threshold, this->strong_pixel_threshold, miliseconds);
+	CHECK(cudaFree(d_output));
+	CHECK(cudaFree(d_image));
+	free(h_output);
 }
 /* **************************************************************************************************** */
 
