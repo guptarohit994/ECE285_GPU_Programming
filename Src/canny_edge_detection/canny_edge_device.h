@@ -107,6 +107,7 @@ public:
 	void compute_pixel_thresholds();
 	void apply_sobel_filter_x();
 	void apply_sobel_filter_y();
+	void streams_on_gaussian_image();
 
 	//__global__ void calculate_sobel_magnitude_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height);
 	void calculate_sobel_magnitude();

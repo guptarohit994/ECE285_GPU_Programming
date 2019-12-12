@@ -175,7 +175,9 @@ int main(int argc, char **argv) {
 
 	from_device.compute_pixel_thresholds();
 
-	from_device.apply_sobel_filter_x();
+	from_device.streams_on_gaussian_image();
+	
+	//from_device.apply_sobel_filter_x();
 	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_x_image(), from_host.get_sobeled_grad_x_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_x_image_cuda\n");
@@ -186,7 +188,7 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, true);
 
-	from_device.apply_sobel_filter_y();
+	//from_device.apply_sobel_filter_y();
 	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_y_image_cuda\n");

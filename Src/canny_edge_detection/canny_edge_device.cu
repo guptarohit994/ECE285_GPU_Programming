@@ -334,6 +334,50 @@ void canny_edge_device::apply_sobel_filter_y() {
 
 /* **************************************************************************************************** */
 
+void canny_edge_device::streams_on_gaussian_image() {
+	int nstreams = 2;
+	cudaStream_t stream[2];
+	cudaEvent_t *events = (cudaEvent_t *)malloc(2 * sizeof(cudaEvent_t));
+
+	for (int i = 0; i < nstreams; ++i)
+	{
+		CHECK(cudaStreamCreateWithFlags(&stream[i], cudaStreamNonBlocking));
+		cudaEventCreateWithFlags(&events[i], cudaEventDisableTiming);
+		//CHECK(cudaStreamCreate(&stream[i]));
+	}
+
+	cudaEvent_t start, stop;
+	CLOCK_CUDA_INIT(start, stop);
+
+	TIC_CUDA(start);
+
+	// apply sobel_filter_x and sobel_filter_y
+	dim3 grid(((this->width + TILE_WIDTH - 1) / TILE_WIDTH), ((this->height + TILE_WIDTH - 1) / TILE_WIDTH));
+	dim3 block(TILE_WIDTH, TILE_WIDTH);
+
+	// convolution of image with sobel filter in horizontal direction
+	do_convolution << < grid, block, 0, stream[0] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
+
+	cudaEventRecord(events[0], stream[0]);
+	cudaStreamWaitEvent(stream[nstreams - 1], events[0], 0);
+
+	// convolution of image with sobel filter in vertical direction
+	do_convolution << < grid, block, 0, stream[0] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
+
+	cudaEventRecord(events[1], stream[1]);
+	cudaStreamWaitEvent(stream[nstreams - 1], events[1], 0);
+
+	TOC_CUDA(stop);
+
+	float miliseconds = 0;
+	TIME_DURATION_CUDA(miliseconds, start, stop);
+	this->total_time_taken += miliseconds;
+	printf("canny_edge_device::apply_sobel_filter_xy -\t\t\t\t done in %.5f ms\n", miliseconds);
+}
+
+
+/* **************************************************************************************************** */
+
 /*	CUDA helper kernel to calculate sobel magnitude
 */
 __global__
