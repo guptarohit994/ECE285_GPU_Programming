@@ -281,7 +281,7 @@ void canny_edge_device::apply_gaussian_kernel() {
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
 
-	printf("canny_edge_device::apply_gaussian_kernel - done in %.2f ms\n", miliseconds);
+	printf("canny_edge_device::apply_gaussian_kernel - done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -340,7 +340,7 @@ void canny_edge_device::apply_sobel_filter_x() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_sobel_filter_x - done in %.2f ms\n", miliseconds);
+	printf("canny_edge_device::apply_sobel_filter_x - done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -364,7 +364,7 @@ void canny_edge_device::apply_sobel_filter_y() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_sobel_filter_y - done in %.2f ms\n", miliseconds);
+	printf("canny_edge_device::apply_sobel_filter_y - done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -402,7 +402,7 @@ void canny_edge_device::calculate_sobel_magnitude() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::calculate_sobel_magnitude - done in %.2f ms\n", miliseconds);
+	printf("canny_edge_device::calculate_sobel_magnitude - done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -421,9 +421,14 @@ void calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_
 		float pix_y = sobeled_grad_y_image[index];
 
 		if ((pix_x * pix_y) < 0)
-			sobeled_dir_image[index] = (float)((atanf(pix_y / pix_x) + M_PI) / M_PI);
-		else
-			sobeled_dir_image[index] = (float)(atanf(pix_y / pix_x) / M_PI);
+			sobeled_dir_image[index] = (float)((atanf((float)pix_y / pix_x) + M_PI) / M_PI);
+		else {
+			// need to handle this case specifically. atanf gives nan
+			if (pix_x == 0)
+				sobeled_dir_image[index] = 0.0f;
+			else
+				sobeled_dir_image[index] = (float)(atanf((float)pix_y / pix_x) / M_PI);
+		}
 	}
 
 }
@@ -443,12 +448,12 @@ void canny_edge_device::calculate_sobel_direction() {
 	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
 	dim3 grid((block.x + total_pixels - 1) / total_pixels);
 
-	calculate_sobel_direction_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
+	calculate_sobel_direction_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_dir_image, this->width, this->height);
 
 	TOC_CUDA(stop);
 	
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::calculate_sobel_direction - done in %.2f ms\n", miliseconds);
+	printf("canny_edge_device::calculate_sobel_direction - done in %.5f ms\n", miliseconds);
 }

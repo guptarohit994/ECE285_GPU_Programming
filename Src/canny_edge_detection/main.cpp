@@ -18,6 +18,14 @@
 #define OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_double_thresholded.png"
 #define OUTPUT_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_edge_tracked.png"
 
+#define OUTPUT_CUDA_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_gaussiated_cuda.png"
+#define OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_sobeled_grad_x_cuda.png"
+#define OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_sobeled_grad_y_cuda.png"
+//#define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_gaussiated.png"
+#define OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_nms_cuda.png"
+#define OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_double_thresholded_cuda.png"
+#define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_edge_tracked_cuda.png"
+
 #define DEBUG
 
 int main(int argc, char **argv) {
@@ -153,6 +161,7 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, gaussiated_image_temp, from_device.get_width(), from_device.get_height());
 	free(gaussiated_image_temp);
 #endif //DEBUG
+	write_image_to_file(from_device.get_gaussiated_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_GAUSSIATED_FILE_NAME, true);
 
 	from_device.compute_pixel_thresholds();
 
@@ -164,6 +173,7 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, sobeled_grad_x_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_grad_x_image_temp);
 #endif //DEBUG
+	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, true);
 
 	from_device.apply_sobel_filter_y();
 #ifdef DEBUG
@@ -172,6 +182,25 @@ int main(int argc, char **argv) {
 	CHECK(cudaMemcpy(sobeled_grad_y_image_temp, from_device.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
 	print_log_matrix(f, sobeled_grad_y_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_grad_y_image_temp);
+#endif //DEBUG
+	write_image_to_file(from_device.get_sobeled_grad_y_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME, true);
+
+	from_device.calculate_sobel_magnitude();
+#ifdef DEBUG
+	fprintf(f, "sobeled_mag_image_cuda\n");
+	float *sobeled_mag_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(sobeled_mag_image_temp, from_device.get_sobeled_mag_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, sobeled_mag_image_temp, from_device.get_width(), from_device.get_height());
+	free(sobeled_mag_image_temp);
+#endif //DEBUG
+
+	from_device.calculate_sobel_direction();
+#ifdef DEBUG
+	fprintf(f, "sobeled_dir_image_cuda\n");
+	float *sobeled_dir_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(sobeled_dir_image_temp, from_device.get_sobeled_dir_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, sobeled_dir_image_temp, from_device.get_width(), from_device.get_height());
+	free(sobeled_dir_image_temp);
 #endif //DEBUG
 
 #ifdef DEBUG

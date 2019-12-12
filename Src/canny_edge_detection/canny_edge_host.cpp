@@ -370,37 +370,20 @@ void canny_edge_host::calculate_sobel_direction() {
 	TIC;
 
 	for (int i = 0; i < (this->width * this->height); i++) {
-		//printf("i:%d, y:%.2f, x:%.2f, atan():%.2f\n", i, this->sobeled_grad_y_image[i], this->sobeled_grad_x_image[i], (atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i])));
-		/*
-		if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] < 0)
-			this->sobeled_dir_image[i] = (float) (((-1 * M_PI/2) + (M_PI/2)) / M_PI);
-		else if (this->sobeled_grad_x_image[i] == 0)
-			this->sobeled_dir_image[i] = (float) (((M_PI/2) + (M_PI/2)) / M_PI);
-		else
-			this->sobeled_dir_image[i] = (float) ((atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + (M_PI/2)) / M_PI);	}
-		*/
 
-		// implementation of atan2 - https://en.wikipedia.org/wiki/Atan2
-		if (this->sobeled_grad_x_image[i] > 0)
-			this->sobeled_dir_image[i] = (float)(atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]));
-		else if (this->sobeled_grad_x_image[i] < 0 && this->sobeled_grad_y_image[i] >= 0)
-			this->sobeled_dir_image[i] = (float)(atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) + M_PI);
-		else if (this->sobeled_grad_x_image[i] < 0 && this->sobeled_grad_y_image[i] < 0)
-			this->sobeled_dir_image[i] = (float)(atan(this->sobeled_grad_y_image[i] / this->sobeled_grad_x_image[i]) - M_PI);
-		else if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] > 0)
-			this->sobeled_dir_image[i] = (float)(M_PI / 2);
-		else if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] < 0)
-			this->sobeled_dir_image[i] = (float)(-1 * M_PI / 2);
-		else if (this->sobeled_grad_x_image[i] == 0 && this->sobeled_grad_y_image[i] == 0)
-			this->sobeled_dir_image[i] = 0.0f;
-		else
-			assert(1 < 0);
+		// implementation of atan2 - https://en.wikipedia.org/wiki/Atan2 but using only quadrants I and II
+		float pix_x = this->sobeled_grad_x_image[i];
+		float pix_y = this->sobeled_grad_y_image[i];
 
-		// squeezing it back into 0 to pi
-		if (this->sobeled_dir_image[i] < 0)
-			this->sobeled_dir_image[i] += (float)M_PI;
-
-		this->sobeled_dir_image[i] /= (float)M_PI;
+		if ((pix_x * pix_y) < 0)
+			this->sobeled_dir_image[i] = (float)((atan((float)pix_y / pix_x) + M_PI) / M_PI);
+		else {
+			// need to handle this case specifically. atan gives nan
+			if (pix_x == 0)
+				this->sobeled_dir_image[i] = 0.0f;
+			else
+				this->sobeled_dir_image[i] = (float)(atan((float)pix_y / pix_x) / M_PI);
+		}
 	}
 
 	TOC;
