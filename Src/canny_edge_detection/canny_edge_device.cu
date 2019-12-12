@@ -393,7 +393,7 @@ void canny_edge_device::calculate_sobel_magnitude() {
 
 	int total_pixels = (this->width * this->height);
 	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
-	dim3 grid((block.x + total_pixels - 1) / total_pixels);
+	dim3 grid((total_pixels + block.x - 1) / block.x);
 
 	calculate_sobel_magnitude_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
 
@@ -446,7 +446,7 @@ void canny_edge_device::calculate_sobel_direction() {
 
 	int total_pixels = (this->width * this->height);
 	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
-	dim3 grid((block.x + total_pixels - 1) / total_pixels);
+	dim3 grid((total_pixels + block.x - 1) / block.x);
 
 	calculate_sobel_direction_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_dir_image, this->width, this->height);
 
@@ -465,43 +465,51 @@ void apply_non_max_suppression_cuda(float *dir_image, float *mag_image, int imag
 	int iy = blockIdx.y * blockDim.y + threadIdx.y;
 
 	int window_size = 3;
-	// number of tiles needed for a row
-	int tile_top_left_index = (iy * window_size) * (image_width - window_size + 1) + (ix * window_size);
+	int total_windows_x = (image_width - window_size + 1);
+	int total_windows_y = (image_height - window_size + 1);
+
+	int tile_top_left_index = (int)(ix / total_windows_x) * image_width + (ix % total_windows_x);
 	int tile_center_index = tile_top_left_index + (image_width + 1);
 
-	float right_value;
-    float left_value;
+	if (ix < (total_windows_x * total_windows_y)) {
+		//printf("ix:%d, iy:%d, tile_top_left_index:%d, tile_center_index:%d\n", ix, iy, tile_top_left_index, tile_center_index);
 
-    // angle 0
-    if ((dir_image[tile_center_index] < (float)(1/8)) || (dir_image[tile_center_index] >= (float)(7/8))) {
-    	right_value = mag_image[tile_center_index + 1];
-    	left_value = mag_image[tile_center_index - 1];
-    }
-    // angle 45
-    else if ((dir_image[tile_center_index] >= (float)(1/8)) && (dir_image[tile_center_index] < (float)(3/8))) {
-    	right_value = mag_image[tile_center_index - (image_width - 1)];
-    	left_value = mag_image[tile_center_index + (image_width - 1)];
-    }
-    // angle 90
-    else if ((dir_image[tile_center_index] >= (float)(3/8)) && (dir_image[tile_center_index] < (float)(5/8))) {
-    	right_value = mag_image[tile_center_index - image_width];
-    	left_value = mag_image[tile_center_index + image_width];
-    }
-    // angle 135
-    else if ((dir_image[tile_center_index] >= (float)(5/8)) && (dir_image[tile_center_index] < (float)(7/8))) {
-    	right_value = mag_image[tile_center_index - (image_width + 1)];
-    	left_value = mag_image[tile_center_index + (image_width + 1)];
-    }
-    else{
-    	// assert should not be reached
-    	assert(0 > 1);
-    }
+		float right_value;
+		float left_value;
 
-    // suppress anything if not the maximum value
-    if ((mag_image[tile_center_index] >= right_value) && (mag_image[tile_center_index] >= left_value))
-    	result[tile_center_index] = mag_image[tile_center_index];
-    else
-    	result[tile_center_index] = 0.0f;
+		// angle 0
+		if ((dir_image[tile_center_index] < (float)(1 / 8)) || (dir_image[tile_center_index] >= (float)(7 / 8))) {
+			right_value = mag_image[tile_center_index + 1];
+			left_value = mag_image[tile_center_index - 1];
+		}
+		// angle 45
+		else if ((dir_image[tile_center_index] >= (float)(1 / 8)) && (dir_image[tile_center_index] < (float)(3 / 8))) {
+			right_value = mag_image[tile_center_index - (image_width - 1)];
+			left_value = mag_image[tile_center_index + (image_width - 1)];
+		}
+		// angle 90
+		else if ((dir_image[tile_center_index] >= (float)(3 / 8)) && (dir_image[tile_center_index] < (float)(5 / 8))) {
+			right_value = mag_image[tile_center_index - image_width];
+			left_value = mag_image[tile_center_index + image_width];
+		}
+		// angle 135
+		else if ((dir_image[tile_center_index] >= (float)(5 / 8)) && (dir_image[tile_center_index] < (float)(7 / 8))) {
+			right_value = mag_image[tile_center_index - (image_width + 1)];
+			left_value = mag_image[tile_center_index + (image_width + 1)];
+		}
+		else {
+			// assert should not be reached
+			assert(0 > 1);
+		}
+
+		// suppress anything if not the maximum value
+		if ((mag_image[tile_center_index] >= right_value) && (mag_image[tile_center_index] >= left_value)) {
+			result[tile_center_index] = mag_image[tile_center_index];
+			//printf("ix:%d, iy:%d, tile_top_left_index:%d, tile_center_index:%d, value:%.2f\n", ix, iy, tile_top_left_index, tile_center_index, mag_image[tile_center_index]);
+		}
+		else
+			result[tile_center_index] = 0.0f;
+	}
 }
 
 /* **************************************************************************************************** */
@@ -528,9 +536,9 @@ void canny_edge_device::apply_non_max_suppression() {
 	int total_windows = total_windows_x * total_windows_y;
 
 
-	dim3 block(256);
+	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_windows));
 	dim3 grid((total_windows + block.x - 1) / block.x);
-    apply_non_max_suppression_cuda <<< grid, block >>> (mag_image, dir_image, image_width, image_height, result);
+    apply_non_max_suppression_cuda <<< grid, block >>> (dir_image, mag_image, image_width, image_height, result);
 
 	TOC_CUDA(stop);
 	
