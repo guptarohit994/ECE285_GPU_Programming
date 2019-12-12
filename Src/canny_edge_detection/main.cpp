@@ -9,22 +9,28 @@
 #include "canny_edge_host.h"
 #include "canny_edge_device.h"
 
-#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/daimler_800_410.png"//daimler_800_410, mercedes_logo_20_20, ece_building, range_rover_1920_1080
-#define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_gaussiated.png"
-#define OUTPUT_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_x.png"
-#define OUTPUT_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_y.png"
-//#define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_gaussiated.png"
-#define OUTPUT_NON_MAX_SUPPRESSED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_nms.png"
-#define OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_double_thresholded.png"
-#define OUTPUT_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_edge_tracked.png"
+#define INPUT_FILES_PATH "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/"
+#define OUTPUT_FILES_PATH "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/"
+#define OUTPUT_CUDA_FILES_PATH "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/"
+// only .png files are supported!
+#define INPUT_FILES_EXTENSIONS ".png"
 
-#define OUTPUT_CUDA_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_gaussiated_cuda.png"
-#define OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_sobeled_grad_x_cuda.png"
-#define OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_sobeled_grad_y_cuda.png"
-//#define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_gaussiated.png"
-#define OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_nms_cuda.png"
-#define OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_double_thresholded_cuda.png"
-#define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/tree_edge_tracked_cuda.png"
+//daimler_800_777, mercedes_logo_20_20, ece_building, range_rover_1920_1080
+#define INPUT_FILE_NAME "daimler_800_777"
+
+#define OUTPUT_GAUSSIATED_FILE_NAME "gaussiated"
+#define OUTPUT_SOBELED_GRAD_X_FILE_NAME "sobeled_grad_x"
+#define OUTPUT_SOBELED_GRAD_Y_FILE_NAME "sobeled_grad_y"
+#define OUTPUT_NON_MAX_SUPPRESSED_FILE_NAME "nms"
+#define OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME "double_thresholded"
+#define OUTPUT_EDGE_TRACKED_FILE_NAME "edge_tracked"
+
+#define OUTPUT_CUDA_GAUSSIATED_FILE_NAME "gaussiated_cuda"
+#define OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME "sobeled_grad_x_cuda"
+#define OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME "sobeled_grad_y_cuda"
+#define OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME "nms_cuda"
+#define OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME "double_thresholded_cuda"
+#define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "edge_tracked_cuda"
 
 //#define DEBUG
 
@@ -37,10 +43,14 @@ int main(int argc, char **argv) {
 	FILE *f = fopen(file_name, "w");
 #endif //DEBUG
 
+	char input_file_name[200];
+	char output_file_name[200];
+	sprintf(input_file_name, "%s%s%s", INPUT_FILES_PATH, INPUT_FILE_NAME, INPUT_FILES_EXTENSIONS);
+
 	// read image from disk
 	// SILENTLY FAILS WITHOUT ERROR!
 	CByteImage cbimage;
-	ReadImage(cbimage, INPUT_FILE_NAME);
+	ReadImage(cbimage, input_file_name);
 
 	// convert to grayscale
 	CByteImage cbimage_gray = ConvertToGray(cbimage);
@@ -51,7 +61,7 @@ int main(int argc, char **argv) {
 								   cbimage_gray_shape.width, 				  \
 								   cbimage_gray_shape.height);
 
-	printf("Successfully loaded %s of height:%d, width:%d\n\n\n", INPUT_FILE_NAME, gimage.get_height(), gimage.get_width());
+	printf("Successfully loaded %s of height:%d, width:%d\n\n\n", input_file_name, gimage.get_height(), gimage.get_width());
 
 	canny_edge_host from_host = canny_edge_host(gimage.get_host_gimage(), gimage.get_width(), gimage.get_height());
 
@@ -75,7 +85,8 @@ int main(int argc, char **argv) {
 	fprintf(f, "gaussiated_image\n");
 	print_log_matrix(f, from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
-	write_image_to_file(from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height(), OUTPUT_GAUSSIATED_FILE_NAME, false);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_GAUSSIATED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
 
 	//from_host.compute_pixel_thresholds();
 
@@ -84,14 +95,16 @@ int main(int argc, char **argv) {
 	fprintf(f, "sobeled_grad_x_image\n");
 	print_log_matrix(f, from_host.get_sobeled_grad_x_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
-	write_image_to_file(from_host.get_sobeled_grad_x_image(), from_host.get_width(), from_host.get_height(), OUTPUT_SOBELED_GRAD_X_FILE_NAME, false);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_SOBELED_GRAD_X_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_host.get_sobeled_grad_x_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
 
 	from_host.apply_sobel_filter_y();
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_y_image\n");
 	print_log_matrix(f, from_host.get_sobeled_grad_y_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
-	write_image_to_file(from_host.get_sobeled_grad_y_image(), from_host.get_width(), from_host.get_height(), OUTPUT_SOBELED_GRAD_Y_FILE_NAME, false);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_SOBELED_GRAD_Y_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_host.get_sobeled_grad_y_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
 
 	from_host.calculate_sobel_magnitude();
 #ifdef DEBUG
@@ -111,7 +124,8 @@ int main(int argc, char **argv) {
 	fprintf(f, "non_max_suppressed_image\n");
 	print_log_matrix(f, from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
-	write_image_to_file(from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height(), OUTPUT_NON_MAX_SUPPRESSED_FILE_NAME, false);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_NON_MAX_SUPPRESSED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
 
 	from_host.compute_pixel_thresholds();
 
@@ -120,14 +134,16 @@ int main(int argc, char **argv) {
 	fprintf(f, "double_thresholded_image\n");
 	print_log_matrix(f, from_host.get_double_thresholded_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
-	write_image_to_file(from_host.get_double_thresholded_image(), from_host.get_width(), from_host.get_height(), OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME, false);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_host.get_double_thresholded_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
 
 	from_host.apply_hysteresis_edge_tracking();
 #ifdef DEBUG
 	fprintf(f, "edge_tracked_image\n");
 	print_log_matrix(f, from_host.get_edge_tracked_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
-	write_image_to_file(from_host.get_edge_tracked_image(), from_host.get_width(), from_host.get_height(), OUTPUT_EDGE_TRACKED_FILE_NAME, false);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_EDGE_TRACKED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_host.get_edge_tracked_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
 
 	printf("\nCPU took %.2fms\n\n\n", from_host.get_total_time_taken());
 
@@ -171,7 +187,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, gaussiated_image_temp, from_device.get_width(), from_device.get_height());
 	free(gaussiated_image_temp);
 #endif //DEBUG
-	write_image_to_file(from_device.get_gaussiated_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_GAUSSIATED_FILE_NAME, true);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_GAUSSIATED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_device.get_gaussiated_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 
 	from_device.compute_pixel_thresholds();
 
@@ -186,7 +203,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, sobeled_grad_x_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_grad_x_image_temp);
 #endif //DEBUG
-	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, true);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 
 	//from_device.apply_sobel_filter_y();
 	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
@@ -197,7 +215,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, sobeled_grad_y_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_grad_y_image_temp);
 #endif //DEBUG
-	write_image_to_file(from_device.get_sobeled_grad_y_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME, true);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_device.get_sobeled_grad_y_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 
 	from_device.streamed_calculate_sobel_magnitude_direction();
 	//from_device.calculate_sobel_magnitude();
@@ -226,7 +245,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, non_max_suppressed_image_temp, from_device.get_width(), from_device.get_height());
 	free(non_max_suppressed_image_temp);
 #endif //DEBUG
-	write_image_to_file(from_device.get_non_max_suppressed_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME, true);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_device.get_non_max_suppressed_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 
 	//from_device.compute_pixel_thresholds();
 
@@ -238,7 +258,8 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, double_thresholded_image_temp, from_device.get_width(), from_device.get_height());
 	free(double_thresholded_image_temp);
 #endif //DEBUG
-	write_image_to_file(from_device.get_double_thresholded_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME, true);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_device.get_double_thresholded_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 
 	from_device.apply_hysteresis_edge_tracking();
 #ifdef DEBUG
@@ -248,13 +269,13 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, edge_tracked_image_temp, from_device.get_width(), from_device.get_height());
 	free(edge_tracked_image_temp);
 #endif //DEBUG
-	write_image_to_file(from_device.get_edge_tracked_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME, true);
+	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME, INPUT_FILES_EXTENSIONS);
+	write_image_to_file(from_device.get_edge_tracked_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 
-	printf("\nCUDA took %.2fms\n", from_device.get_total_time_taken());
+	printf("\nCUDA took %.2fms\n\n", from_device.get_total_time_taken());
 
 #ifdef DEBUG
 	fclose(f);
 #endif //DEBUG
-
 
 }
