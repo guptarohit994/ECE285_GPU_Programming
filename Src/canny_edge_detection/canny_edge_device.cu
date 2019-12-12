@@ -430,7 +430,6 @@ void calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_
 				sobeled_dir_image[index] = (float)(atanf((float)pix_y / pix_x) / M_PI);
 		}
 	}
-
 }
 
 /* **************************************************************************************************** */
@@ -546,4 +545,119 @@ void canny_edge_device::apply_non_max_suppression() {
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
     printf("canny_edge_device::apply_non_max_suppression - done in %.5f ms\n", miliseconds);
+}
+
+/* **************************************************************************************************** */
+
+__global__
+void apply_double_thresholds_cuda(float *image, int image_width, int image_height, float strong_pixel_threshold, float weak_pixel_threshold, float *result) {
+	int ix = blockIdx.x * blockDim.x + threadIdx.x;
+	int iy = blockIdx.y * blockDim.y + threadIdx.y;
+
+	int index = iy * image_width + ix;
+
+	if (index < (image_width * image_height)) {
+		if (image[index] >= strong_pixel_threshold)
+			result[index] = STRONG_PIXEL_VALUE;
+		else if (image[index] >= weak_pixel_threshold)
+			result[index] = WEAK_PIXEL_VALUE;
+		else
+			result[index] = 0.0f;
+	}
+}
+
+/* **************************************************************************************************** */
+
+/*	applies the double thresholds to the provided image
+*/
+void canny_edge_device::apply_double_thresholds() {
+	cudaEvent_t start, stop;
+	CLOCK_CUDA_INIT(start, stop);
+
+	TIC_CUDA(start);
+
+	int total_pixels = (this->width * this->height);
+	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
+	dim3 grid((total_pixels + block.x - 1) / block.x);
+
+	apply_double_thresholds_cuda << < grid, block >> > (this->non_max_suppressed_image, this->width, this->height, this->strong_pixel_threshold, this->weak_pixel_threshold, this->double_thresholded_image);
+
+	TOC_CUDA(stop);
+
+	float miliseconds = 0;
+	TIME_DURATION_CUDA(miliseconds, start, stop);
+	this->total_time_taken += miliseconds;
+	printf("canny_edge_device::apply_double_thresholds - done in %.5f ms\n", miliseconds);
+}
+
+/* **************************************************************************************************** */
+
+__global__
+void apply_hysteresis_edge_tracking_cuda(float *image, int image_width, int image_height, float *result) {
+	int ix = blockIdx.x * blockDim.x + threadIdx.x;
+	int iy = blockIdx.y * blockDim.y + threadIdx.y;
+
+	int window_size = 3;
+	int total_windows_x = (image_width - window_size + 1);
+	int total_windows_y = (image_height - window_size + 1);
+
+	int tile_top_left_index = (int)(ix / total_windows_x) * image_width + (ix % total_windows_x);
+	int tile_center_index = tile_top_left_index + (image_width + 1);
+
+	if (ix < (total_windows_x * total_windows_y)) {
+		if (image[tile_center_index] == WEAK_PIXEL_VALUE) {
+			// check if any strong pixels are there in the vicinity
+			// start from 0deg, 45, 90, 135
+			if ((image[tile_center_index + 1] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index - 1] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index - (image_width - 1)] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index + (image_width - 1)] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index - image_width] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index + image_width] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index - (image_width + 1)] == STRONG_PIXEL_VALUE) ||
+				(image[tile_center_index + (image_width + 1)] == STRONG_PIXEL_VALUE)) {
+				result[tile_center_index] = STRONG_PIXEL_VALUE;
+			}
+			else
+				result[tile_center_index] = 0.0f;
+		}
+	}
+
+}
+
+/* **************************************************************************************************** */
+
+/*	applies edge tracking by hysteresis to the provided image
+ignores the boundary pixels
+*/
+void canny_edge_device::apply_hysteresis_edge_tracking() {
+	cudaEvent_t start, stop;
+	CLOCK_CUDA_INIT(start, stop);
+
+	TIC_CUDA(start);
+
+	float *image = this->double_thresholded_image;
+	int image_width = this->width;
+	int image_height = this->height;
+	float *result = this->edge_tracked_image;
+
+	// init as double thresholds
+	CHECK(cudaMemcpy(this->edge_tracked_image, this->double_thresholded_image, sizeof(float) * this->width * this->height, cudaMemcpyDeviceToDevice));
+
+	int window_size = 3; //square window
+	int total_windows_x = (image_width - window_size + 1);
+	int total_windows_y = (image_height - window_size + 1);
+	int total_windows = total_windows_x * total_windows_y;
+
+
+	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_windows));
+	dim3 grid((total_windows + block.x - 1) / block.x);
+	apply_hysteresis_edge_tracking_cuda << < grid, block >> > (this->double_thresholded_image, this->width, this->height, this->edge_tracked_image);
+	
+	TOC_CUDA(stop);
+
+	float miliseconds = 0;
+	TIME_DURATION_CUDA(miliseconds, start, stop);
+	this->total_time_taken += miliseconds;
+	printf("canny_edge_device::apply_hysteresis_edge_tracking - done in %.5f ms\n", miliseconds);
 }
