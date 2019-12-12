@@ -334,7 +334,9 @@ void canny_edge_device::apply_sobel_filter_y() {
 
 /* **************************************************************************************************** */
 
-void canny_edge_device::streams_on_gaussian_image() {
+/*	apply sobel_filter_x and sobel_filter_y in streams
+*/
+void canny_edge_device::streamed_apply_sobel_filter_x_y() {
 	int nstreams = 2;
 	cudaStream_t stream[2];
 	cudaEvent_t *events = (cudaEvent_t *)malloc(2 * sizeof(cudaEvent_t));
@@ -482,7 +484,10 @@ void canny_edge_device::calculate_sobel_direction() {
 
 /* **************************************************************************************************** */
 
-void canny_edge_device::streams_on_sobeled_images() {
+/*	Function that creates two streams and performs 
+	gradient madnitude and gradient direction calculation
+*/
+void canny_edge_device::streamed_calculate_sobel_magnitude_direction() {
 	int nstreams = 2;
 	cudaStream_t stream[2];
 	cudaEvent_t *events = (cudaEvent_t *)malloc(2 * sizeof(cudaEvent_t));
@@ -517,7 +522,7 @@ void canny_edge_device::streams_on_sobeled_images() {
 
 	// ##################################### stream end ############################################### //
 
-	// not needed
+	// needed
 	CHECK(cudaStreamSynchronize(stream[0]));
 	CHECK(cudaStreamSynchronize(stream[1]));
 
@@ -536,6 +541,9 @@ void canny_edge_device::streams_on_sobeled_images() {
 }
 
 /* **************************************************************************************************** */
+
+/*	CUDA helper kernel to perform NMS
+*/
 __global__
 void apply_non_max_suppression_cuda(float *dir_image, float *mag_image, int image_width, int image_height, float *result) {
 	int ix = blockIdx.x * blockDim.x + threadIdx.x;
@@ -627,7 +635,9 @@ void canny_edge_device::apply_non_max_suppression() {
 
 /* **************************************************************************************************** */
 
-// Interleaved Pair Implementation with less divergence
+/*	CUDA helper kernel to compute pixel thresholds
+	Uses interleaved Pair Implementation with less divergence
+*/
 __global__ 
 void compute_pixel_thresholds_cuda(float *image, int image_width, int image_height, float *result) {
 	// set thread ID
@@ -646,7 +656,6 @@ void compute_pixel_thresholds_cuda(float *image, int image_width, int image_heig
 		if (tid < stride) {
 			idata[tid] += idata[tid + stride];
 		}
-
 		__syncthreads();
 	}
 
@@ -660,7 +669,6 @@ void compute_pixel_thresholds_cuda(float *image, int image_width, int image_heig
 /*	calculate the thresholds using the gaussiated image.
 	Constants are tuned
 */
-
 void canny_edge_device::compute_pixel_thresholds() {
 
 	int image_width = this->width;
@@ -689,7 +697,7 @@ void canny_edge_device::compute_pixel_thresholds() {
 
 	CHECK(cudaMemcpy(h_output, d_output, sizeof(float) * grid.x, cudaMemcpyDeviceToHost));
 
-	for (int i = 0; i < grid.x; i++)
+	for (unsigned int i = 0; i < grid.x; i++)
 		sum_pixel_val += h_output[i];
 
 	TOC_CUDA(stop);
@@ -708,6 +716,8 @@ void canny_edge_device::compute_pixel_thresholds() {
 }
 /* **************************************************************************************************** */
 
+/*	CUDA helper kernel to apply double thresholds
+*/
 __global__
 void apply_double_thresholds_cuda(float *image, int image_width, int image_height, float strong_pixel_threshold, float weak_pixel_threshold, float *result) {
 	int ix = blockIdx.x * blockDim.x + threadIdx.x;
@@ -751,6 +761,8 @@ void canny_edge_device::apply_double_thresholds() {
 
 /* **************************************************************************************************** */
 
+/*	CUDA helper kernel to apply hysteresis edge tracking
+*/
 __global__
 void apply_hysteresis_edge_tracking_cuda(float *image, int image_width, int image_height, float *result) {
 	int ix = blockIdx.x * blockDim.x + threadIdx.x;
@@ -795,17 +807,12 @@ void canny_edge_device::apply_hysteresis_edge_tracking() {
 
 	TIC_CUDA(start);
 
-	float *image = this->double_thresholded_image;
-	int image_width = this->width;
-	int image_height = this->height;
-	float *result = this->edge_tracked_image;
-
 	// init as double thresholds
 	CHECK(cudaMemcpy(this->edge_tracked_image, this->double_thresholded_image, sizeof(float) * this->width * this->height, cudaMemcpyDeviceToDevice));
 
 	int window_size = 3; //square window
-	int total_windows_x = (image_width - window_size + 1);
-	int total_windows_y = (image_height - window_size + 1);
+	int total_windows_x = (this->width - window_size + 1);
+	int total_windows_y = (this->height - window_size + 1);
 	int total_windows = total_windows_x * total_windows_y;
 
 
