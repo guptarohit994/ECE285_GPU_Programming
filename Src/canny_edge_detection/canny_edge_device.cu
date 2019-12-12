@@ -281,7 +281,7 @@ void canny_edge_device::apply_gaussian_kernel() {
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
 
-	printf("canny_edge_device::apply_gaussian_kernel - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::apply_gaussian_kernel -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -305,7 +305,7 @@ void canny_edge_device::apply_sobel_filter_x() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_sobel_filter_x - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::apply_sobel_filter_x -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -329,7 +329,7 @@ void canny_edge_device::apply_sobel_filter_y() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_sobel_filter_y - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::apply_sobel_filter_y -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -359,7 +359,7 @@ void canny_edge_device::calculate_sobel_magnitude() {
 	int total_pixels = (this->width * this->height);
 	dim3 block(MIN(256, total_pixels));
 	dim3 grid((total_pixels + block.x - 1) / block.x);
-	printf("grid.x:%d, grid.y:%d, block.x:%d, block.y:%d\n", grid.x, grid.y, block.x, block.y);
+	//printf("grid.x:%d, grid.y:%d, block.x:%d, block.y:%d\n", grid.x, grid.y, block.x, block.y);
 	calculate_sobel_magnitude_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
 
 	TOC_CUDA(stop);
@@ -367,7 +367,7 @@ void canny_edge_device::calculate_sobel_magnitude() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::calculate_sobel_magnitude - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::calculate_sobel_magnitude -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -419,7 +419,7 @@ void canny_edge_device::calculate_sobel_direction() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::calculate_sobel_direction - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::calculate_sobel_direction -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -509,7 +509,7 @@ void canny_edge_device::apply_non_max_suppression() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-    printf("canny_edge_device::apply_non_max_suppression - done in %.5f ms\n", miliseconds);
+    printf("canny_edge_device::apply_non_max_suppression -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -633,7 +633,7 @@ void canny_edge_device::apply_double_thresholds() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_double_thresholds - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::apply_double_thresholds -\t\t\t\t done in %.5f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -705,5 +705,5 @@ void canny_edge_device::apply_hysteresis_edge_tracking() {
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_hysteresis_edge_tracking - done in %.5f ms\n", miliseconds);
+	printf("canny_edge_device::apply_hysteresis_edge_tracking -\t\t\t done in %.5f ms\n", miliseconds);
 }
