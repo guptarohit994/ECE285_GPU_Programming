@@ -8,6 +8,12 @@
 #ifndef _CUSTOM_UTILS_H
 #define _CUSTOM_UTILS_H
 
+#include <cuda_fp16.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <helper_functions.h>
+
 #include "common.h"
 
 #include "imageLib/Image.h"

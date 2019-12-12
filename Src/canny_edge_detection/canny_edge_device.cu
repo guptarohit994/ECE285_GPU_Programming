@@ -17,7 +17,7 @@ canny_edge_device::canny_edge_device(float *image, int width, int height) {
 
 	CHECK(cudaMalloc((void **)&this->image, sizeof(float) * width * height));
 	assert(this->image != NULL);
-	//memcpy(this->image, image, sizeof(float) * width * height);
+	CHECK(cudaMemcpy(this->image, image, sizeof(float) * width * height, cudaMemcpyHostToDevice));
 
 	this->width = width;
 	this->height = height;
@@ -63,11 +63,8 @@ canny_edge_device::canny_edge_device(float *image, int width, int height) {
 	assert(this->edge_tracked_image != NULL);
 
 	// initialize
-	dim3 block(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE);
-	this->init_gaussian_kernel <<< 1, block  >>>(this->gaussian_kernel);
-
-	block(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE);
-	this->init_sobel_filters <<< 1, block >>>(this->sobel_filter_x, this->sobel_filter_y);
+	this->init_gaussian_kernel();
+	this->init_sobel_filters();
 }
 
 /* **************************************************************************************************** */
@@ -156,10 +153,10 @@ float* canny_edge_device::get_edge_tracked_image() {
 
 /* **************************************************************************************************** */
 
-/* 	initialize gaussian kernel
+/* 	CUDA kernel to initialize gaussian kernel
 */
-__global__ 
-void canny_edge_device::init_gaussian_kernel(float *gaussian_kernel) {
+__global__
+void init_gaussian_kernel_cuda(float *gaussian_kernel) {
 	int ix = threadIdx.x;
 	int iy = threadIdx.y;
 	int index = iy * GAUSSIAN_KERNEL_SIZE + ix;
@@ -167,36 +164,51 @@ void canny_edge_device::init_gaussian_kernel(float *gaussian_kernel) {
 	int weight = GAUSSIAN_KERNEL_SIZE / 2;
 
 	float stddev = 1.0f;
-	float denominator = 2 * (float) pow(stddev, 2);
+	float denominator = 2.0f * (float)powf(stddev, 2);
 
-	float numerator = (float) (pow(ix - weight, 2) + pow(iy - weight, 2));
+	float numerator = (float)(powf(fabsf(ix - weight), 2.0f) + powf(fabsf(iy - weight), 2.0f));
 
-	gaussian_kernel[index] = (float) (exp( (-1 * numerator)/ denominator) / (M_PI * denominator));
+	gaussian_kernel[index] = (float)(expf((-1 * numerator) / denominator) / (M_PI * denominator));
 }
 
 /* **************************************************************************************************** */
 
-/* 	initialize sobel filters
+void canny_edge_device::init_gaussian_kernel() {
+	dim3 block(GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE);
+	init_gaussian_kernel_cuda << < 1, block >> >(this->gaussian_kernel);
+}
+
+/* **************************************************************************************************** */
+
+/* 	CUDA kernel to initialize sobel filters
 	https://stackoverflow.com/a/41065243/253056
 */
 __global__
-void canny_edge_device::init_sobel_filters(float *sobel_filter_x, float *sobel_filter_y) {
+void init_sobel_filters_cuda(float *sobel_filter_x, float *sobel_filter_y) {
 	int ix = threadIdx.x;
 	int iy = threadIdx.y;
 	int index = iy * SOBEL_FILTER_SIZE + ix;
 
 	int weight = SOBEL_FILTER_SIZE / 2;
 
-	float denominator = (float) (pow(ix - weight, 2) + pow(iy - weight, 2));
+	float denominator = (float)(powf(fabsf(ix - weight), 2) + powf(fabsf(iy - weight), 2));
 
-	if (denominator == 0.0f){
-		sobel_filter_x[i] = 0.0f;
-		sobel_filter_y[i] = 0.0f;
+	if (denominator == 0.0f) {
+		sobel_filter_x[index] = 0.0f;
+		sobel_filter_y[index] = 0.0f;
 	}
 	else {
-		sobel_filter_x[i] = ((ix - weight) * weight) / denominator;
-		sobel_filter_y[i] = ((iy - weight) * weight) / denominator;
+		sobel_filter_x[index] = ((ix - weight) * weight) / denominator;
+		sobel_filter_y[index] = ((iy - weight) * weight) / denominator;
 	}
+}
+/* **************************************************************************************************** */
+
+/* 	initialize sobel filters
+*/
+void canny_edge_device::init_sobel_filters() {
+	dim3 block(SOBEL_FILTER_SIZE, SOBEL_FILTER_SIZE);
+	init_sobel_filters_cuda << < 1, block >> >(this->sobel_filter_x, this->sobel_filter_y);
 }
 
 /* **************************************************************************************************** */
@@ -206,7 +218,7 @@ void canny_edge_device::init_sobel_filters(float *sobel_filter_x, float *sobel_f
 	output image will be of same size as input
 */
 __global__
-void canny_edge_device::do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *kernel_size) {
+void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result) {
 	const int shared_mem_width = TILE_WIDTH + MAX(SOBEL_FILTER_SIZE, GAUSSIAN_KERNEL_SIZE) - 1;
 	__shared__ float shared_mem[shared_mem_width][shared_mem_width];
 
@@ -243,7 +255,7 @@ void canny_edge_device::do_convolution(float *image, int image_width, int image_
 	int x = blockIdx.x * TILE_WIDTH + threadIdx.x;
 	int y = blockIdx.y * TILE_WIDTH + threadIdx.y;
 	if (x < image_width && y < image_height)
-		kernel_size[y * image_width + x] = (fminf(fmaxf((accum), 0.0), 1.0));
+		result[y * image_width + x] = (fminf(fmaxf((accum), 0.0), 1.0));
 	__syncthreads();
 }
 
@@ -257,11 +269,11 @@ void canny_edge_device::apply_gaussian_kernel() {
 
 	TIC_CUDA(start);
 
-	dim3 grid(((this->width  + TILE_WIDTH - 1) / TILE_WIDTH), ((this->width  + TILE_WIDTH - 1) / TILE_WIDTH));
+	dim3 grid(((this->width  + TILE_WIDTH - 1) / TILE_WIDTH), ((this->height  + TILE_WIDTH - 1) / TILE_WIDTH));
 	dim3 block(TILE_WIDTH, TILE_WIDTH);
 
 	// convolution of image with gaussian kernel
-	this->do_convolution <<< grid, block >>> (this->image, this->width, this->height, this->gaussian_kernel, GAUSSIAN_KERNEL_SIZE, this->gaussiated_image);
+	do_convolution <<< grid, block >>> (this->image, this->width, this->height, this->gaussian_kernel, GAUSSIAN_KERNEL_SIZE, this->gaussiated_image);
 
 	TOC_CUDA(stop);
 	
@@ -269,7 +281,7 @@ void canny_edge_device::apply_gaussian_kernel() {
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
 
-	printf("canny_edge_device::apply_gaussian_kernel - done!\n");
+	printf("canny_edge_device::apply_gaussian_kernel - done in %.2f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -280,9 +292,11 @@ void canny_edge_device::apply_gaussian_kernel() {
 */
 
 void canny_edge_device::compute_pixel_thresholds() {
-	float *image = this->gaussiated_image;
+
 	int image_width = this->width;
 	int image_height = this->height;
+	float *image = (float*)malloc(sizeof(float) * image_width * image_height);
+	CHECK(cudaMemcpy(image, this->gaussiated_image, sizeof(float) * image_width * image_height, cudaMemcpyDeviceToHost));
 
 	TIC;
 
@@ -294,14 +308,15 @@ void canny_edge_device::compute_pixel_thresholds() {
 		sum_pixel_val += image[i];
 	}
 
-	this->strong_pixel_threshold = (0.75f * sum_pixel_val) / (image_width * image_height);
-	this->weak_pixel_threshold = (0.70f * sum_pixel_val) / (image_width * image_height);
+	this->strong_pixel_threshold = (0.66f * sum_pixel_val) / (image_width * image_height);
+	this->weak_pixel_threshold = (0.33f * sum_pixel_val) / (image_width * image_height);
 
 	TOC;
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 	printf("canny_edge_device::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
+	free(image);
 }
 
 /* **************************************************************************************************** */
@@ -314,18 +329,18 @@ void canny_edge_device::apply_sobel_filter_x() {
 
 	TIC_CUDA(start);
 
-	dim3 grid(((this->width  + TILE_WIDTH - 1) / TILE_WIDTH), ((this->width  + TILE_WIDTH - 1) / TILE_WIDTH));
+	dim3 grid(((this->width  + TILE_WIDTH - 1) / TILE_WIDTH), ((this->height + TILE_WIDTH - 1) / TILE_WIDTH));
 	dim3 block(TILE_WIDTH, TILE_WIDTH);
 
 	// convolution of image with sobel filter in horizontal direction
-	this->do_convolution <<< grid, block >>> (this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
+	do_convolution <<< grid, block >>> (this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
 
 	TOC_CUDA(stop);
 	
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_sobel_filter_x - done!\n");
+	printf("canny_edge_device::apply_sobel_filter_x - done in %.2f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -342,14 +357,14 @@ void canny_edge_device::apply_sobel_filter_y() {
 	dim3 block(TILE_WIDTH, TILE_WIDTH);
 
 	// convolution of image with sobel filter in vertical direction
-	this->do_convolution <<< grid, block >>> (this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
+	do_convolution <<< grid, block >>> (this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
 
 	TOC_CUDA(stop);
 	
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::apply_sobel_filter_y - done!\n");
+	printf("canny_edge_device::apply_sobel_filter_y - done in %.2f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -357,13 +372,13 @@ void canny_edge_device::apply_sobel_filter_y() {
 /*	CUDA helper kernel to calculate sobel magnitude
 */
 __global__
-void canny_edge_device::calculate_sobel_magnitude_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height) {
+void calculate_sobel_magnitude_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height) {
 	int ix = blockIdx.x * blockDim.x + threadIdx.x;
 	int iy = blockIdx.y * blockDim.y + threadIdx.y;
 
 	int index = iy * image_width + ix;
 	if (index < (image_width * image_height))
-		sobeled_mag_image[index] = (float) sqrt(pow(sobeled_grad_x_image[index], 2) + pow(sobeled_grad_y_image[index], 2));
+		sobeled_mag_image[index] = (float) sqrtf(powf(sobeled_grad_x_image[index], 2) + powf(sobeled_grad_y_image[index], 2));
 }
 
 /* **************************************************************************************************** */
@@ -376,18 +391,18 @@ void canny_edge_device::calculate_sobel_magnitude() {
 
 	TIC_CUDA(start);
 
-	int total_pixels = (this->image_width * this->image_height);
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels))
+	int total_pixels = (this->width * this->height);
+	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
 	dim3 grid((block.x + total_pixels - 1) / total_pixels);
 
-	this->calculate_sobel_magnitude_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
+	calculate_sobel_magnitude_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
 
 	TOC_CUDA(stop);
 	
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::calculate_sobel_magnitude - done!\n");
+	printf("canny_edge_device::calculate_sobel_magnitude - done in %.2f ms\n", miliseconds);
 }
 
 /* **************************************************************************************************** */
@@ -395,7 +410,7 @@ void canny_edge_device::calculate_sobel_magnitude() {
 /*	CUDA helper kernel to compute sobel direction image
 */
 __global__
-void canny_edge_device::calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_dir_image, int image_width, int image_height) {
+void calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_dir_image, int image_width, int image_height) {
 	int ix = blockIdx.x * blockDim.x + threadIdx.x;
 	int iy = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -406,9 +421,9 @@ void canny_edge_device::calculate_sobel_direction_cuda(float *sobeled_grad_x_ima
 		float pix_y = sobeled_grad_y_image[index];
 
 		if ((pix_x * pix_y) < 0)
-			get_sobeled_mag_image[index] = (float)((atan(pix_y / pix_x) + M_PI) / M_PI);
+			sobeled_dir_image[index] = (float)((atanf(pix_y / pix_x) + M_PI) / M_PI);
 		else
-			get_sobeled_mag_image[index] = (float)(atan(pix_y / pix_x) / M_PI);
+			sobeled_dir_image[index] = (float)(atanf(pix_y / pix_x) / M_PI);
 	}
 
 }
@@ -424,16 +439,16 @@ void canny_edge_device::calculate_sobel_direction() {
 
 	TIC_CUDA(start);
 
-	int total_pixels = (this->image_width * this->image_height);
-	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels))
+	int total_pixels = (this->width * this->height);
+	dim3 block(MAX(MAX_THREADS_PER_BLOCK, total_pixels));
 	dim3 grid((block.x + total_pixels - 1) / total_pixels);
 
-	this->calculate_sobel_direction_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
+	calculate_sobel_direction_cuda <<< grid, block >>> (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
 
 	TOC_CUDA(stop);
 	
 	float miliseconds = 0;
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
-	printf("canny_edge_device::calculate_sobel_direction - done!\n");
+	printf("canny_edge_device::calculate_sobel_direction - done in %.2f ms\n", miliseconds);
 }

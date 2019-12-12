@@ -275,7 +275,7 @@ void canny_edge_host::apply_gaussian_kernel() {
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
 
-	printf("canny_edge_host::apply_gaussian_kernel - done!\n");
+	printf("canny_edge_host::apply_gaussian_kernel - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -299,8 +299,8 @@ void canny_edge_host::compute_pixel_thresholds() {
 		sum_pixel_val += image[i];
 	}
 
-	this->strong_pixel_threshold = (0.75f * sum_pixel_val) / (image_width * image_height);
-	this->weak_pixel_threshold = (0.70f * sum_pixel_val) / (image_width * image_height);
+	this->strong_pixel_threshold = (0.66f * sum_pixel_val) / (image_width * image_height);
+	this->weak_pixel_threshold = (0.33f * sum_pixel_val) / (image_width * image_height);
 
 	TOC;
 
@@ -323,7 +323,7 @@ void canny_edge_host::apply_sobel_filter_x() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_host::apply_sobel_filter_x - done!\n");
+	printf("canny_edge_host::apply_sobel_filter_x - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -340,7 +340,7 @@ void canny_edge_host::apply_sobel_filter_y() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_host::apply_sobel_filter_y - done!\n");
+	printf("canny_edge_host::apply_sobel_filter_y - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -358,7 +358,7 @@ void canny_edge_host::calculate_sobel_magnitude() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_host::calculate_sobel_magnitude - done!\n");
+	printf("canny_edge_host::calculate_sobel_magnitude - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -399,13 +399,15 @@ void canny_edge_host::calculate_sobel_direction() {
 		// squeezing it back into 0 to pi
 		if (this->sobeled_dir_image[i] < 0)
 			this->sobeled_dir_image[i] += (float)M_PI;
+
+		this->sobeled_dir_image[i] /= (float)M_PI;
 	}
 
 	TOC;
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_host::calculate_sobel_direction - done!\n");
+	printf("canny_edge_host::calculate_sobel_direction - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -476,7 +478,7 @@ void canny_edge_host::apply_non_max_suppression() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-    printf("canny_edge_host::apply_non_max_suppression - done!\n");
+    printf("canny_edge_host::apply_non_max_suppression - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -514,7 +516,7 @@ void canny_edge_host::apply_double_thresholds() {
 	this->weak_pixel_threshold = this->strong_pixel_threshold * 0.17f;
 	*/
 
-	printf("canny_edge_host::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
+	//printf("canny_edge_host::compute_pixel_thresholds - weak_pixel_threshold:%.2f, strong_pixel_threshold:%.2f\n", this->weak_pixel_threshold, this->strong_pixel_threshold);
 
 
 
@@ -532,7 +534,7 @@ void canny_edge_host::apply_double_thresholds() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-	printf("canny_edge_host::apply_double_thresholds - done!\n");
+	printf("canny_edge_host::apply_double_thresholds - done in %.2f ms\n", time_taken.count() * 1000);
 }
 
 /* **************************************************************************************************** */
@@ -584,5 +586,5 @@ void canny_edge_host::apply_hysteresis_edge_tracking() {
 
 	TIME_DURATION;
 	this->total_time_taken += time_taken.count() * 1000; // convert to ms
-    printf("canny_edge_host::apply_hysteresis_edge_tracking - done!\n");
+    printf("canny_edge_host::apply_hysteresis_edge_tracking - done in %.2f ms\n", time_taken.count() * 1000);
 }

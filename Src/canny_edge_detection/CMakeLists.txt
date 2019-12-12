@@ -16,6 +16,7 @@ source_group("Headers" FILES ${HEADERS})
 cuda_add_executable( canny_edge_detection
 ${HEADERS}
 gray_image.cpp
+canny_edge_device.cu
 canny_edge_host.cpp
 main.cpp
 OPTIONS --cudart=shared  -lineinfo -arch sm_52 -use_fast_math -maxrregcount 104

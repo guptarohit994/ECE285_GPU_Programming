@@ -7,8 +7,9 @@
 
 #include "utils.h"
 #include "canny_edge_host.h"
+#include "canny_edge_device.h"
 
-#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/range_rover_1920_1080.png"
+#define INPUT_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/mercedes_logo_20_20.png"
 #define OUTPUT_GAUSSIATED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_gaussiated.png"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_x.png"
 #define OUTPUT_SOBELED_GRAD_Y_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_sobeled_grad_y.png"
@@ -17,13 +18,13 @@
 #define OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_double_thresholded.png"
 #define OUTPUT_EDGE_TRACKED_FILE_NAME "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/tree_edge_tracked.png"
 
-//#define DEBUG
+#define DEBUG
 
 int main(int argc, char **argv) {
 
 #ifdef DEBUG
 	char file_name[50];
-	sprintf(file_name, "log_ours.txt");
+	sprintf(file_name, "../../../Output_images/log_ours.txt");
 
 	FILE *f = fopen(file_name, "w");
 #endif //DEBUG
@@ -119,9 +120,63 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_host.get_edge_tracked_image(), from_host.get_width(), from_host.get_height(), OUTPUT_EDGE_TRACKED_FILE_NAME, false);
 
+	printf("CPU took %.2fms\n", from_host.get_total_time_taken());
+
+	// ##################################################################################################
+	canny_edge_device from_device = canny_edge_device(gimage.get_host_gimage(), gimage.get_width(), gimage.get_height());
+
+#ifdef DEBUG
+	fprintf(f, "gaussian_kernel_cuda\n");
+	float *gaussian_kernel_temp = (float*)malloc(sizeof(float) * GAUSSIAN_KERNEL_SIZE * GAUSSIAN_KERNEL_SIZE);
+	CHECK(cudaMemcpy(gaussian_kernel_temp, from_device.get_gaussian_kernel(), sizeof(float) * GAUSSIAN_KERNEL_SIZE * GAUSSIAN_KERNEL_SIZE, cudaMemcpyDeviceToHost));
+	print_log_matrix(f, gaussian_kernel_temp, GAUSSIAN_KERNEL_SIZE, GAUSSIAN_KERNEL_SIZE);
+	free(gaussian_kernel_temp);
+
+	fprintf(f, "sobel_filter_x_cuda\n");
+	float *sobel_filter_x_temp = (float*)malloc(sizeof(float) * SOBEL_FILTER_SIZE * SOBEL_FILTER_SIZE);
+	CHECK(cudaMemcpy(sobel_filter_x_temp, from_device.get_sobel_filter_x(), sizeof(float) * SOBEL_FILTER_SIZE * SOBEL_FILTER_SIZE, cudaMemcpyDeviceToHost));
+	print_log_matrix(f, sobel_filter_x_temp, SOBEL_FILTER_SIZE, SOBEL_FILTER_SIZE);
+	free(sobel_filter_x_temp);
+
+	fprintf(f, "sobel_filter_y_cuda\n");
+	float *sobel_filter_y_temp = (float*)malloc(sizeof(float) * SOBEL_FILTER_SIZE * SOBEL_FILTER_SIZE);
+	CHECK(cudaMemcpy(sobel_filter_y_temp, from_device.get_sobel_filter_y(), sizeof(float) * SOBEL_FILTER_SIZE * SOBEL_FILTER_SIZE, cudaMemcpyDeviceToHost));
+	print_log_matrix(f, sobel_filter_y_temp, SOBEL_FILTER_SIZE, SOBEL_FILTER_SIZE);
+	free(sobel_filter_y_temp);
+#endif //DEBUG
+
+	from_device.apply_gaussian_kernel();
+#ifdef DEBUG
+	fprintf(f, "gaussiated_image_cuda\n");
+	float *gaussiated_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(gaussiated_image_temp, from_device.get_gaussiated_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, gaussiated_image_temp, from_device.get_width(), from_device.get_height());
+	free(gaussiated_image_temp);
+#endif //DEBUG
+
+	from_device.compute_pixel_thresholds();
+
+	from_device.apply_sobel_filter_x();
+#ifdef DEBUG
+	fprintf(f, "sobeled_grad_x_image_cuda\n");
+	float *sobeled_grad_x_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(sobeled_grad_x_image_temp, from_device.get_sobeled_grad_x_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, sobeled_grad_x_image_temp, from_device.get_width(), from_device.get_height());
+	free(sobeled_grad_x_image_temp);
+#endif //DEBUG
+
+	from_device.apply_sobel_filter_y();
+#ifdef DEBUG
+	fprintf(f, "sobeled_grad_y_image_cuda\n");
+	float *sobeled_grad_y_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
+	CHECK(cudaMemcpy(sobeled_grad_y_image_temp, from_device.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
+	print_log_matrix(f, sobeled_grad_y_image_temp, from_device.get_width(), from_device.get_height());
+	free(sobeled_grad_y_image_temp);
+#endif //DEBUG
+
 #ifdef DEBUG
 	fclose(f);
 #endif //DEBUG
 
-	printf("CPU took %.2fms\n", from_host.get_total_time_taken());
+
 }

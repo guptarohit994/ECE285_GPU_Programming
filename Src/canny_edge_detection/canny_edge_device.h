@@ -20,21 +20,21 @@
 #define SMEM_SIZE 128
 #define MAX_THREADS_PER_BLOCK 1024
 
-#define CLOCK_CUDA_INIT(start, stop)
+#define CLOCK_CUDA_INIT(start, stop)                                           \
 {                                                                              \
     CHECK(cudaEventCreate(&start));                                            \
-    CHECK(cudaEventCreate(&stop));                                             \                                                                     \
+    CHECK(cudaEventCreate(&stop));                                             \
 }
-#define TIC_CUDA(start)
+#define TIC_CUDA(start)                                                        \
 {                                                                              \
 	CHECK(cudaEventRecord(start));                                             \
 }
-#define TOC_CUDA(stop)
+#define TOC_CUDA(stop)                                                         \
 {                                                                              \
 	CHECK(cudaEventRecord(stop));                                              \
 	CHECK(cudaEventSynchronize(stop));                                         \
 }
-#define TIME_DURATION_CUDA(miliseconds, start, stop)
+#define TIME_DURATION_CUDA(miliseconds, start, stop)                           \
 {                                                                              \
 	CHECK(cudaEventElapsedTime(&miliseconds, start, stop));                    \
 }
@@ -74,7 +74,9 @@ class canny_edge_device {
 
 	float total_time_taken;
 
+	//__global__ void init_gaussian_kernel_cuda(float *gaussian_kernel);
 	void init_gaussian_kernel();
+	//__global__ void init_sobel_filters_cuda(float *sobel_filter_x, float *sobel_filter_y);
 	void init_sobel_filters();
 	
 public:
@@ -100,15 +102,15 @@ public:
 	void print_sobel_filters();
 	void print_gaussiated_image();
 
-	void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result);
+	//__global__ void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result);
 	void apply_gaussian_kernel();
 	void compute_pixel_thresholds();
 	void apply_sobel_filter_x();
 	void apply_sobel_filter_y();
 
-	void calculate_sobel_magnitude_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height);
+	//__global__ void calculate_sobel_magnitude_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height);
 	void calculate_sobel_magnitude();
-	void calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height);
+	//__global__ void calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height);
 	void calculate_sobel_direction();
 	
 	void apply_non_max_suppression();
