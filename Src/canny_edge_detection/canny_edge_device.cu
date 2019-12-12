@@ -457,3 +457,85 @@ void canny_edge_device::calculate_sobel_direction() {
 	this->total_time_taken += miliseconds;
 	printf("canny_edge_device::calculate_sobel_direction - done in %.5f ms\n", miliseconds);
 }
+
+/* **************************************************************************************************** */
+__global__
+void apply_non_max_suppression_cuda(float *dir_image, float *mag_image, int image_width, int image_height, float *result) {
+	int ix = blockIdx.x * blockDim.x + threadIdx.x;
+	int iy = blockIdx.y * blockDim.y + threadIdx.y;
+
+	int window_size = 3;
+	// number of tiles needed for a row
+	int tile_top_left_index = (iy * window_size) * (image_width - window_size + 1) + (ix * window_size);
+	int tile_center_index = tile_top_left_index + (image_width + 1);
+
+	float right_value;
+    float left_value;
+
+    // angle 0
+    if ((dir_image[tile_center_index] < (float)(1/8)) || (dir_image[tile_center_index] >= (float)(7/8))) {
+    	right_value = mag_image[tile_center_index + 1];
+    	left_value = mag_image[tile_center_index - 1];
+    }
+    // angle 45
+    else if ((dir_image[tile_center_index] >= (float)(1/8)) && (dir_image[tile_center_index] < (float)(3/8))) {
+    	right_value = mag_image[tile_center_index - (image_width - 1)];
+    	left_value = mag_image[tile_center_index + (image_width - 1)];
+    }
+    // angle 90
+    else if ((dir_image[tile_center_index] >= (float)(3/8)) && (dir_image[tile_center_index] < (float)(5/8))) {
+    	right_value = mag_image[tile_center_index - image_width];
+    	left_value = mag_image[tile_center_index + image_width];
+    }
+    // angle 135
+    else if ((dir_image[tile_center_index] >= (float)(5/8)) && (dir_image[tile_center_index] < (float)(7/8))) {
+    	right_value = mag_image[tile_center_index - (image_width + 1)];
+    	left_value = mag_image[tile_center_index + (image_width + 1)];
+    }
+    else{
+    	// assert should not be reached
+    	assert(0 > 1);
+    }
+
+    // suppress anything if not the maximum value
+    if ((mag_image[tile_center_index] >= right_value) && (mag_image[tile_center_index] >= left_value))
+    	result[tile_center_index] = mag_image[tile_center_index];
+    else
+    	result[tile_center_index] = 0.0f;
+}
+
+/* **************************************************************************************************** */
+
+/*	performs non-maximal suppression on the input image and writes into result
+	image should contain direction (sobeled_dir_image)
+	Skips border values
+*/
+void canny_edge_device::apply_non_max_suppression() {
+	cudaEvent_t start, stop;
+	CLOCK_CUDA_INIT(start, stop);
+
+	TIC_CUDA(start);
+
+	float *mag_image = this->sobeled_mag_image;
+	float *dir_image = this->sobeled_dir_image;
+	int image_width = this->width;
+	int image_height = this->height;
+	float *result = this->non_max_suppressed_image;
+
+	int window_size = 3; //square window
+	int total_windows_x = (image_width - window_size + 1);
+	int total_windows_y = (image_height - window_size + 1);
+	int total_windows = total_windows_x * total_windows_y;
+
+
+	dim3 block(256);
+	dim3 grid((total_windows + block.x - 1) / block.x);
+    apply_non_max_suppression_cuda <<< grid, block >>> (mag_image, dir_image, image_width, image_height, result);
+
+	TOC_CUDA(stop);
+	
+	float miliseconds = 0;
+	TIME_DURATION_CUDA(miliseconds, start, stop);
+	this->total_time_taken += miliseconds;
+    printf("canny_edge_device::apply_non_max_suppression - done in %.5f ms\n", miliseconds);
+}
