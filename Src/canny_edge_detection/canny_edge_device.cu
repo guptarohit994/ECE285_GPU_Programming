@@ -355,17 +355,25 @@ void canny_edge_device::streams_on_gaussian_image() {
 	dim3 grid(((this->width + TILE_WIDTH - 1) / TILE_WIDTH), ((this->height + TILE_WIDTH - 1) / TILE_WIDTH));
 	dim3 block(TILE_WIDTH, TILE_WIDTH);
 
+	// ##################################### stream #################################################### //
 	// convolution of image with sobel filter in horizontal direction
 	do_convolution << < grid, block, 0, stream[0] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
 
 	cudaEventRecord(events[0], stream[0]);
 	cudaStreamWaitEvent(stream[nstreams - 1], events[0], 0);
-
+	
+	// ##################################### stream #################################################### //
 	// convolution of image with sobel filter in vertical direction
-	do_convolution << < grid, block, 0, stream[0] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
+	do_convolution << < grid, block, 0, stream[1] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
 
 	cudaEventRecord(events[1], stream[1]);
 	cudaStreamWaitEvent(stream[nstreams - 1], events[1], 0);
+
+	// ##################################### stream end ############################################### //
+	
+	// not needed
+	//CHECK(cudaStreamSynchronize(stream[0]));
+	//CHECK(cudaStreamSynchronize(stream[1]));
 
 	TOC_CUDA(stop);
 
@@ -373,6 +381,12 @@ void canny_edge_device::streams_on_gaussian_image() {
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
 	printf("canny_edge_device::apply_sobel_filter_xy -\t\t\t\t done in %.5f ms\n", miliseconds);
+
+	// destroy streams
+	for (int i = 0; i < nstreams; ++i) {
+		CHECK(cudaStreamDestroy(stream[i]));
+	}
+	free(events);
 }
 
 
@@ -464,6 +478,61 @@ void canny_edge_device::calculate_sobel_direction() {
 	TIME_DURATION_CUDA(miliseconds, start, stop);
 	this->total_time_taken += miliseconds;
 	printf("canny_edge_device::calculate_sobel_direction -\t\t\t\t done in %.5f ms\n", miliseconds);
+}
+
+/* **************************************************************************************************** */
+
+void canny_edge_device::streams_on_sobeled_images() {
+	int nstreams = 2;
+	cudaStream_t stream[2];
+	cudaEvent_t *events = (cudaEvent_t *)malloc(2 * sizeof(cudaEvent_t));
+
+	for (int i = 0; i < nstreams; ++i)
+	{
+		CHECK(cudaStreamCreateWithFlags(&stream[i], cudaStreamNonBlocking));
+		cudaEventCreateWithFlags(&events[i], cudaEventDisableTiming);
+		//CHECK(cudaStreamCreate(&stream[i]));
+	}
+
+	cudaEvent_t start, stop;
+	CLOCK_CUDA_INIT(start, stop);
+
+	TIC_CUDA(start);
+
+	int total_pixels = (this->width * this->height);
+	dim3 block(MIN(256, total_pixels));
+	dim3 grid((total_pixels + block.x - 1) / block.x);
+
+	// ##################################### stream #################################################### //
+	calculate_sobel_magnitude_cuda << < grid, block, 0, stream[0] >> > (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
+
+	cudaEventRecord(events[0], stream[0]);
+	cudaStreamWaitEvent(stream[nstreams - 1], events[0], 0);
+
+	// ##################################### stream #################################################### //
+	calculate_sobel_direction_cuda << < grid, block, 0, stream[1] >> > (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_dir_image, this->width, this->height);
+
+	cudaEventRecord(events[1], stream[1]);
+	cudaStreamWaitEvent(stream[nstreams - 1], events[1], 0);
+
+	// ##################################### stream end ############################################### //
+
+	// not needed
+	CHECK(cudaStreamSynchronize(stream[0]));
+	CHECK(cudaStreamSynchronize(stream[1]));
+
+	TOC_CUDA(stop);
+
+	float miliseconds = 0;
+	TIME_DURATION_CUDA(miliseconds, start, stop);
+	this->total_time_taken += miliseconds;
+	printf("canny_edge_device::calculate_sobel_mag / dir -\t\t\t\t done in %.5f ms\n", miliseconds);
+
+	// destroy streams
+	for (int i = 0; i < nstreams; ++i) {
+		CHECK(cudaStreamDestroy(stream[i]));
+	}
+	free(events);
 }
 
 /* **************************************************************************************************** */

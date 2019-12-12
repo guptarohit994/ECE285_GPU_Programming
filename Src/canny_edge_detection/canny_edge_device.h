@@ -113,6 +113,7 @@ public:
 	void calculate_sobel_magnitude();
 	//__global__ void calculate_sobel_direction_cuda(float *sobeled_grad_x_image, float *sobeled_grad_y_image, float *sobeled_mag_image, int image_width, int image_height);
 	void calculate_sobel_direction();
+	void streams_on_sobeled_images();
 	
 	void apply_non_max_suppression();
 	void apply_double_thresholds();

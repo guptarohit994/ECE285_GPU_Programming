@@ -199,7 +199,8 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	write_image_to_file(from_device.get_sobeled_grad_y_image(), from_device.get_width(), from_device.get_height(), OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME, true);
 
-	from_device.calculate_sobel_magnitude();
+	from_device.streams_on_sobeled_images();
+	//from_device.calculate_sobel_magnitude();
 #ifdef DEBUG
 	fprintf(f, "sobeled_mag_image_cuda\n");
 	float *sobeled_mag_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
@@ -208,7 +209,7 @@ int main(int argc, char **argv) {
 	free(sobeled_mag_image_temp);
 #endif //DEBUG
 
-	from_device.calculate_sobel_direction();
+	//from_device.calculate_sobel_direction();
 #ifdef DEBUG
 	fprintf(f, "sobeled_dir_image_cuda\n");
 	float *sobeled_dir_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
