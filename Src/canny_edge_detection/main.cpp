@@ -15,7 +15,7 @@
 // only .png files are supported!
 #define INPUT_FILES_EXTENSIONS ".png"
 
-//daimler_800_777, mercedes_logo_20_20, ece_building, range_rover_1920_1080
+//daimler_800_777, bmw_1683_1230, ece_building, range_rover_1920_1080, audi_2913_1539, Red_Mazda_2528_1368, Horses_Run_Animals_horse_9192x6012
 #define INPUT_FILE_NAME "daimler_800_777"
 
 #define OUTPUT_GAUSSIATED_FILE_NAME "gaussiated"
@@ -32,7 +32,11 @@
 #define OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME "double_thresholded_cuda"
 #define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "edge_tracked_cuda"
 
+// writes output image after every stage to log file
 //#define DEBUG
+
+// dumps only final image
+#define ONLY_FINAL
 
 int main(int argc, char **argv) {
 
@@ -80,32 +84,46 @@ int main(int argc, char **argv) {
 //	from_host.print_sobel_filters();
 #endif //DEBUG
 
+	// ############################################################### CPU Step 1 ############################################################### //
 	from_host.apply_gaussian_kernel();
 #ifdef DEBUG
 	fprintf(f, "gaussiated_image\n");
 	print_log_matrix(f, from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_GAUSSIATED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
+#endif //ONLY_FINAL
 
-	//from_host.compute_pixel_thresholds();
+	// ############################################################### CPU Step 2 ############################################################### //
+	from_host.compute_pixel_thresholds();
 
+	// ############################################################### CPU Step 3 ############################################################### //
 	from_host.apply_sobel_filter_x();
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_x_image\n");
 	print_log_matrix(f, from_host.get_sobeled_grad_x_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_SOBELED_GRAD_X_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_host.get_sobeled_grad_x_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
+#endif //ONLY_FINAL
 
+	// ############################################################### CPU Step 4 ############################################################### //
 	from_host.apply_sobel_filter_y();
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_y_image\n");
 	print_log_matrix(f, from_host.get_sobeled_grad_y_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_SOBELED_GRAD_Y_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_host.get_sobeled_grad_y_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
+#endif //ONLY_FINAL
 
+	// ############################################################### CPU Step 5 ############################################################### //
 	from_host.calculate_sobel_magnitude();
 #ifdef DEBUG
 	fprintf(f, "sobeled_mag_image\n");
@@ -113,30 +131,38 @@ int main(int argc, char **argv) {
 #endif //DEBUG
 	//write_image_to_file(from_host.get_gaussiated_image(), from_host.get_width(), from_host.get_height(), OUTPUT_GAUSSIATED_FILE_NAME, false);
 
+	// ############################################################### CPU Step 6 ############################################################### //
 	from_host.calculate_sobel_direction();
 #ifdef DEBUG
 	fprintf(f, "sobeled_dir_image\n");
 	print_log_matrix(f, from_host.get_sobeled_dir_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
 
+	// ############################################################### CPU Step 7 ############################################################### //
 	from_host.apply_non_max_suppression();
 #ifdef DEBUG
 	fprintf(f, "non_max_suppressed_image\n");
 	print_log_matrix(f, from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_NON_MAX_SUPPRESSED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_host.get_non_max_suppressed_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
+#endif //ONLY_FINAL
 
-	from_host.compute_pixel_thresholds();
-
+	// ############################################################### CPU Step 8 ############################################################### //
 	from_host.apply_double_thresholds();
 #ifdef DEBUG
 	fprintf(f, "double_thresholded_image\n");
 	print_log_matrix(f, from_host.get_double_thresholded_image(), from_host.get_width(), from_host.get_height());
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_FILES_PATH, INPUT_FILE_NAME, OUTPUT_DOUBLE_THRESHOLDED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_host.get_double_thresholded_image(), from_host.get_width(), from_host.get_height(), output_file_name, false);
+#endif //ONLY_FINAL
 
+	// ############################################################### CPU Step 9 ############################################################### //
 	from_host.apply_hysteresis_edge_tracking();
 #ifdef DEBUG
 	fprintf(f, "edge_tracked_image\n");
@@ -151,12 +177,12 @@ int main(int argc, char **argv) {
 	fclose(f);
 #endif //DEBUG
 
-	// ##################################################################################################
+	// ############################################################### GPU Start ############################################################### //
 #ifdef DEBUG
 	sprintf(file_name, "../../../Output_images_cuda/log_device.txt");
-
 	f = fopen(file_name, "w");
 #endif //DEBUG
+
 	canny_edge_device from_device = canny_edge_device(gimage.get_host_gimage(), gimage.get_width(), gimage.get_height());
 
 #ifdef DEBUG
@@ -179,6 +205,8 @@ int main(int argc, char **argv) {
 	free(sobel_filter_y_temp);
 #endif //DEBUG
 
+	// ############################################################### GPU Step 1 ############################################################### //
+
 	from_device.apply_gaussian_kernel();
 #ifdef DEBUG
 	fprintf(f, "gaussiated_image_cuda\n");
@@ -187,10 +215,17 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, gaussiated_image_temp, from_device.get_width(), from_device.get_height());
 	free(gaussiated_image_temp);
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_GAUSSIATED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_device.get_gaussiated_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
+#endif //ONLY_FINAL
+
+	// ############################################################### GPU Step 2 ############################################################### //
 
 	from_device.compute_pixel_thresholds();
+
+	// ############################################################### GPU Step 3,4 ############################################################### //
 
 	from_device.streamed_apply_sobel_filter_x_y();
 	
@@ -203,8 +238,11 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, sobeled_grad_x_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_grad_x_image_temp);
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_SOBELED_GRAD_X_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_device.get_sobeled_grad_x_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
+#endif //ONLY_FINAL
 
 	//from_device.apply_sobel_filter_y();
 	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
@@ -215,8 +253,13 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, sobeled_grad_y_image_temp, from_device.get_width(), from_device.get_height());
 	free(sobeled_grad_y_image_temp);
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_SOBELED_GRAD_Y_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_device.get_sobeled_grad_y_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
+#endif //ONLY_FINAL
+
+	// ############################################################### GPU Step 5,6 ############################################################### //
 
 	from_device.streamed_calculate_sobel_magnitude_direction();
 	//from_device.calculate_sobel_magnitude();
@@ -237,6 +280,8 @@ int main(int argc, char **argv) {
 	free(sobeled_dir_image_temp);
 #endif //DEBUG
 
+	// ############################################################### GPU Step 7 ############################################################### //
+
 	from_device.apply_non_max_suppression();
 #ifdef DEBUG
 	fprintf(f, "non_max_suppressed_image_cuda\n");
@@ -245,10 +290,15 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, non_max_suppressed_image_temp, from_device.get_width(), from_device.get_height());
 	free(non_max_suppressed_image_temp);
 #endif //DEBUG
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_NON_MAX_SUPPRESSED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_device.get_non_max_suppressed_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
+#endif //ONLY_FINAL
 
 	//from_device.compute_pixel_thresholds();
+
+	// ############################################################### GPU Step 8 ############################################################### //
 
 	from_device.apply_double_thresholds();
 #ifdef DEBUG
@@ -257,9 +307,14 @@ int main(int argc, char **argv) {
 	CHECK(cudaMemcpy(double_thresholded_image_temp, from_device.get_double_thresholded_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyDeviceToHost));
 	print_log_matrix(f, double_thresholded_image_temp, from_device.get_width(), from_device.get_height());
 	free(double_thresholded_image_temp);
-#endif //DEBUG
+#endif //DEBUG'
+
+#ifndef ONLY_FINAL
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_DOUBLE_THRESHOLDED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_device.get_double_thresholded_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
+#endif //ONLY_FINAL
+
+	// ############################################################### GPU Step 9 ############################################################### //
 
 	from_device.apply_hysteresis_edge_tracking();
 #ifdef DEBUG
@@ -269,6 +324,7 @@ int main(int argc, char **argv) {
 	print_log_matrix(f, edge_tracked_image_temp, from_device.get_width(), from_device.get_height());
 	free(edge_tracked_image_temp);
 #endif //DEBUG
+
 	sprintf(output_file_name, "%s%s_%s%s", OUTPUT_CUDA_FILES_PATH, INPUT_FILE_NAME, OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME, INPUT_FILES_EXTENSIONS);
 	write_image_to_file(from_device.get_edge_tracked_image(), from_device.get_width(), from_device.get_height(), output_file_name, true);
 

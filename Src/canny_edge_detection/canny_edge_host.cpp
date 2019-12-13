@@ -285,7 +285,7 @@ void canny_edge_host::apply_gaussian_kernel() {
 */
 
 void canny_edge_host::compute_pixel_thresholds() {
-	float *image = this->non_max_suppressed_image;
+	float *image = this->gaussiated_image;
 	int image_width = this->width;
 	int image_height = this->height;
 
