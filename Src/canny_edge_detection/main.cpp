@@ -15,8 +15,8 @@
 // only .png files are supported!
 #define INPUT_FILES_EXTENSIONS ".png"
 
-//daimler_800_777, bmw_1683_1230, ece_building, range_rover_1920_1080, audi_2913_1539, Red_Mazda_2528_1368, Horses_Run_Animals_horse_9192x6012
-#define INPUT_FILE_NAME "daimler_800_777"
+//daimler_800_777, bmw_1683_1230, range_rover_1920_1080, car_1920_1080, Red_Mazda_2528_1368, audi_2913_1539, Horses_Run_Animals_horse_9192x6012, Valve_original_paper_640_480
+#define INPUT_FILE_NAME "bmw_1683_1230"
 
 #define OUTPUT_GAUSSIATED_FILE_NAME "gaussiated"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "sobeled_grad_x"
@@ -36,7 +36,7 @@
 //#define DEBUG
 
 // dumps only final image
-#define ONLY_FINAL
+//#define ONLY_FINAL
 
 int main(int argc, char **argv) {
 
