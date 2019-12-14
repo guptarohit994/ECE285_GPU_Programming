@@ -218,7 +218,7 @@ void canny_edge_device::init_sobel_filters() {
 	output image will be of same size as input
 */
 __global__
-void do_convolution(float *image, int image_width, int image_height, float *kernel, int kernel_size, float *result) {
+void do_convolution(float *image, int image_width, int image_height, const float* __restrict__ kernel, int kernel_size, float *result) {
 	const int shared_mem_width = TILE_WIDTH + MAX(SOBEL_FILTER_SIZE, GAUSSIAN_KERNEL_SIZE) - 1;
 	__shared__ float shared_mem[shared_mem_width][shared_mem_width];
 
@@ -233,6 +233,7 @@ void do_convolution(float *image, int image_width, int image_height, float *kern
 		shared_mem[destY][destX] = image[src];
 	else
 		shared_mem[destY][destX] = 0;
+
 
 	dest = threadIdx.y * TILE_WIDTH + threadIdx.x + TILE_WIDTH * TILE_WIDTH;
 	destY = dest / shared_mem_width;
@@ -256,7 +257,6 @@ void do_convolution(float *image, int image_width, int image_height, float *kern
 	int y = blockIdx.y * TILE_WIDTH + threadIdx.y;
 	if (x < image_width && y < image_height)
 		result[y * image_width + x] = (fminf(fmaxf((accum), 0.0), 1.0));
-	__syncthreads();
 }
 
 /* **************************************************************************************************** */
@@ -427,7 +427,6 @@ void canny_edge_device::streamed_apply_sobel_filter_x_y() {
 	{
 		CHECK(cudaStreamCreateWithFlags(&stream[i], cudaStreamNonBlocking));
 		cudaEventCreateWithFlags(&events[i], cudaEventDisableTiming);
-		//CHECK(cudaStreamCreate(&stream[i]));
 	}
 
 	cudaEvent_t start, stop;
@@ -444,20 +443,16 @@ void canny_edge_device::streamed_apply_sobel_filter_x_y() {
 	do_convolution << < grid, block, 0, stream[0] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_x, SOBEL_FILTER_SIZE, this->sobeled_grad_x_image);
 
 	cudaEventRecord(events[0], stream[0]);
-	cudaStreamWaitEvent(stream[nstreams - 1], events[0], 0);
+	cudaStreamWaitEvent((cudaStream_t)1, events[0], 0);
 	
 	// ##################################### stream #################################################### //
 	// convolution of image with sobel filter in vertical direction
 	do_convolution << < grid, block, 0, stream[1] >> > (this->gaussiated_image, this->width, this->height, this->sobel_filter_y, SOBEL_FILTER_SIZE, this->sobeled_grad_y_image);
 
 	cudaEventRecord(events[1], stream[1]);
-	cudaStreamWaitEvent(stream[nstreams - 1], events[1], 0);
+	cudaStreamWaitEvent((cudaStream_t)1, events[1], 0);
 
 	// ##################################### stream end ############################################### //
-	
-	// not needed
-	//CHECK(cudaStreamSynchronize(stream[0]));
-	//CHECK(cudaStreamSynchronize(stream[1]));
 
 	TOC_CUDA(stop);
 
@@ -579,7 +574,6 @@ void canny_edge_device::streamed_calculate_sobel_magnitude_direction() {
 	{
 		CHECK(cudaStreamCreateWithFlags(&stream[i], cudaStreamNonBlocking));
 		cudaEventCreateWithFlags(&events[i], cudaEventDisableTiming);
-		//CHECK(cudaStreamCreate(&stream[i]));
 	}
 
 	cudaEvent_t start, stop;
@@ -595,19 +589,15 @@ void canny_edge_device::streamed_calculate_sobel_magnitude_direction() {
 	calculate_sobel_magnitude_cuda << < grid, block, 0, stream[0] >> > (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_mag_image, this->width, this->height);
 
 	cudaEventRecord(events[0], stream[0]);
-	cudaStreamWaitEvent(stream[nstreams - 1], events[0], 0);
+	cudaStreamWaitEvent((cudaStream_t)1, events[0], 0);
 
 	// ##################################### stream #################################################### //
 	calculate_sobel_direction_cuda << < grid, block, 0, stream[1] >> > (this->sobeled_grad_x_image, this->sobeled_grad_y_image, this->sobeled_dir_image, this->width, this->height);
 
 	cudaEventRecord(events[1], stream[1]);
-	cudaStreamWaitEvent(stream[nstreams - 1], events[1], 0);
+	cudaStreamWaitEvent((cudaStream_t)1, events[1], 0);
 
 	// ##################################### stream end ############################################### //
-
-	// needed
-	CHECK(cudaStreamSynchronize(stream[0]));
-	CHECK(cudaStreamSynchronize(stream[1]));
 
 	TOC_CUDA(stop);
 

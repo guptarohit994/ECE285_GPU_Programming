@@ -16,7 +16,7 @@
 #define INPUT_FILES_EXTENSIONS ".png"
 
 //daimler_800_777, bmw_1683_1230, range_rover_1920_1080, car_1920_1080, Red_Mazda_2528_1368, audi_2913_1539, Horses_Run_Animals_horse_9192x6012, Valve_original_paper_640_480
-#define INPUT_FILE_NAME "daimler_800_777"
+#define INPUT_FILE_NAME "Red_Mazda_2528_1368"
 
 #define OUTPUT_GAUSSIATED_FILE_NAME "gaussiated"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "sobeled_grad_x"
@@ -33,7 +33,7 @@
 #define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "edge_tracked_cuda"
 
 // writes output image after every stage to log file
-#define DEBUG
+//#define DEBUG
 
 // dumps only final image
 //#define ONLY_FINAL
@@ -245,7 +245,6 @@ int main(int argc, char **argv) {
 #endif //ONLY_FINAL
 
 	//from_device.apply_sobel_filter_y();
-	//CHECK(cudaMemcpy(from_device.get_sobeled_grad_y_image(), from_host.get_sobeled_grad_y_image(), sizeof(float) * from_device.get_width() * from_device.get_height(), cudaMemcpyHostToDevice));
 #ifdef DEBUG
 	fprintf(f, "sobeled_grad_y_image_cuda\n");
 	float *sobeled_grad_y_image_temp = (float*)malloc(sizeof(float) * from_device.get_width() * from_device.get_height());
