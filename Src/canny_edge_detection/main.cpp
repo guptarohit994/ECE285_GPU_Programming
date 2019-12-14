@@ -16,6 +16,7 @@
 #define INPUT_FILES_EXTENSIONS ".png"
 
 //daimler_800_777, bmw_1683_1230, range_rover_1920_1080, car_1920_1080, Red_Mazda_2528_1368, audi_2913_1539, Horses_Run_Animals_horse_9192x6012, Valve_original_paper_640_480
+// WARNING - Horses_Run_Animals_horse_9192x6012 is not present in our repository, so it will fail!
 #define INPUT_FILE_NAME "Red_Mazda_2528_1368"
 
 #define OUTPUT_GAUSSIATED_FILE_NAME "gaussiated"
