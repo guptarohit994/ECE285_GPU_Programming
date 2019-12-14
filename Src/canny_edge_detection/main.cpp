@@ -9,14 +9,14 @@
 #include "canny_edge_host.h"
 #include "canny_edge_device.h"
 
-#define INPUT_FILES_PATH "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Input_images/"
-#define OUTPUT_FILES_PATH "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images/"
-#define OUTPUT_CUDA_FILES_PATH "C:/Users/r4gupta/Downloads/final_exam/ECE285_GPU_Programming/Output_images_cuda/"
+#define INPUT_FILES_PATH "../../../Input_images/"
+#define OUTPUT_FILES_PATH "../../../Output_images/"
+#define OUTPUT_CUDA_FILES_PATH "../../../Output_images_cuda/"
 // only .png files are supported!
 #define INPUT_FILES_EXTENSIONS ".png"
 
 //daimler_800_777, bmw_1683_1230, range_rover_1920_1080, car_1920_1080, Red_Mazda_2528_1368, audi_2913_1539, Horses_Run_Animals_horse_9192x6012, Valve_original_paper_640_480
-#define INPUT_FILE_NAME "bmw_1683_1230"
+#define INPUT_FILE_NAME "daimler_800_777"
 
 #define OUTPUT_GAUSSIATED_FILE_NAME "gaussiated"
 #define OUTPUT_SOBELED_GRAD_X_FILE_NAME "sobeled_grad_x"
@@ -33,7 +33,7 @@
 #define OUTPUT_CUDA_EDGE_TRACKED_FILE_NAME "edge_tracked_cuda"
 
 // writes output image after every stage to log file
-//#define DEBUG
+#define DEBUG
 
 // dumps only final image
 //#define ONLY_FINAL
